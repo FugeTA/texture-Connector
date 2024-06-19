@@ -20,3 +20,6 @@ choose texture folder.
 choose FBX file what used substancepainter.  
 choose imageformat.  
 push Connect button.
+
+## Licence
+[MIT](LICENSE)
