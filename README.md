@@ -10,8 +10,8 @@ pymel
 1.Install py to own maya script folder.  
 2.run command  
 ```
-  import textureConnecter
-  textureConnecter.openwindow()
+import textureConnecter
+textureConnecter.openwindow()
 ```
 ## Description
 1.Exporting Textures Using the Arnold Template on Substance Painter.  
