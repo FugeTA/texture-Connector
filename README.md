@@ -1,3 +1,3 @@
 # texture-Connector
-import textureConnecter/n
+import textureConnecter
 textureConnecter.openWindow()
