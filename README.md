@@ -1,11 +1,11 @@
 # texture-Connector
 
-image or gif
+![screenshot](images/texconnect_window.png)
 
 ## Overview
 Easy connect texture For AdobeSubstancePainter to Maya
 ## Requirement
-none
+pymel
 ## Usage
 1.Install py to own maya script folder.  
 2.run command  
@@ -13,11 +13,10 @@ none
   import textureConnecter
   textureConnecter.openwindow()
 ```
-## Features
-Export texture on Arnold template.
-select Material on Hypershade.
-select
-
-## Reference
-
-## Author
+## Description
+Export texture on Arnold template.  
+select Material on Hypershade.  
+choose texture folder.  
+choose FBX file what used substancepainter.  
+choose imageformat.  
+push Connect button.
