@@ -14,12 +14,14 @@ pymel
   textureConnecter.openwindow()
 ```
 ## Description
-Export texture on Arnold template.  
-select Material on Hypershade.  
-choose texture folder.  
-choose FBX file what used substancepainter.  
-choose imageformat.  
-push Connect button.
+Exporting Textures Using the Arnold Template on Substance Painter.
+Open Hypershade and select a material.
+Choose texture folder.
+Choose the FBX file previously used in Substance Painter.
+Choose the preferred image format.
+Click the "Connect" button to set texture.
+## Author
+[Twitter](https://x.com/cotte_921)
 
 ## Licence
 [MIT](LICENSE)
