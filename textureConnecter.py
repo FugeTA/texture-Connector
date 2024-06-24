@@ -3,50 +3,90 @@ import os
 import re
 import subprocess
 
+# 接続
+def baseColor(f,files,input,imgPath):  # ベースカラー
+    if(f == 'BaseColor'):
+        files.outColor>>input
+        pm.setAttr(files.fileTextureName,imgPath)  # Fileノードに画像を設定
+def normal(f,files,input,imgPath):
+    if(f == 'Normal'):  # ノーマルマップ
+        normal = pm.shadingNode('aiNormalMap', asUtility=True)  # aiノーマルマップ作成
+        pm.setAttr(files.ignoreColorSpaceFileRules,1)  # カラースペース変更、変更を固定
+        pm.setAttr(files.cs,"Raw")
+        files.outColor>>normal.input
+        normal.outValue>>input
+        pm.setAttr(files.fileTextureName,imgPath)  # Fileノードに画像を設定
+def height(f,files,input,inputSG,imgPath):
+    if(f == 'Height'):  # ハイトマップ
+        pm.setAttr(files.ignoreColorSpaceFileRules,1)  # カラースペース変更、変更を固定
+        pm.setAttr(files.cs,"Raw")
+        disp = pm.shadingNode('displacementShader', asUtility=True)  # Heightマップ用のディスプレイスメントを作成
+        files.outAlpha>>disp.displacement
+        disp.displacement>>inputSG
+        pm.setAttr(files.fileTextureName,imgPath)  # Fileノードに画像を設定
+def othertex(f,files,input,imgPath):
+    if(f in ['Emissive','Metalness','Roughness']):  # その他グレースケールテクスチャ
+        pm.setAttr(files.ignoreColorSpaceFileRules,1)  # カラースペース変更、変更を固定
+        pm.setAttr(files.cs,"Raw")
+        files.outAlpha>>input
+        pm.setAttr(files.fileTextureName,imgPath)  # Fileノードに画像を設定
+        return
+        
+# 画像の分類
+def Sorttex(f,files,input,inputSG,imgPath):
+    if(f == 'BaseColor'):    
+        baseColor(f,files,input,imgPath)
+        return
+    if(f == 'Normal'):    
+        normal(f,files,input,imgPath)
+        return
+    if(f == 'Height'):    
+        height(f,files,input,imgPath)
+        return
+    if(f in ['Emissive','Metalness','Roughness']):  
+        othertex(f,files,input,imgPath)
+    
+# ノード作成
+def nodecrate(s,i,nodeName):
+    files = pm.shadingNode('file', asTexture=True,isColorManaged=True)  # Fileノード作成
+    p2t = pm.shadingNode('place2dTexture', asUtility=True)  # P2Tノード作成
+    pm.defaultNavigation(connectToExisting=True, source=p2t, destination=files, f=True)  # 上記のノード接続
+    input = s[0]+'.'+nodeName[i]  # マテリアルのアトリビュートノード名
+    inputSG = s[0]+'SG.'+nodeName[i]  # シェーディングエンジンのアトリビュートノード名（Height用）
+    return(files,input,inputSG)
+    
+    
+    
+# パスの確認
+def checkPath(fullPath):
+    if os.path.isfile(fullPath)==False:  # 設定されたパスに画像があるかチェック
+        missfile = pm.confirmDialog(t='Error',m=('Image file not found.\nPlease select material and check file path.\n'+'"'+fullPath+'"'),b=['Copy to clipboard','Close'])
+        if missfile == 'Copy to clipboard':
+            subprocess.run("clip", input=fullPath, text=True)
+    return (os.path.isfile(fullPath))
+            
+# テクスチャフォルダパスの調整
+def projpath(texpath,name,s,f,imgformat):
+    project = pm.workspace(q=True,lw=True)  # パスの調整
+    project = str(project[1].replace('/','\\')+'\\')
+    imgPath = str(texPath+'/'+name+'_'+s[0]+'_'+f+'.'+imgformat)
+    imgPath = imgPath.replace('/','\\')
+    fullPath = str(project+imgPath)
+
 # 本体
 def texplace(nodeName,fileName,texPath,name,imgformat):
     s = pm.ls(sl=True)
+    
     if s == []:
         pm.confirmDialog(t='Error',m=('Plese select a Material'),b='Close')
-    else:
-        for i,f in enumerate(fileName):
-            project = pm.workspace(q=True,lw=True)  # パスの調整
-            project = str(project[1].replace('/','\\')+'\\')
-            imgPath = str(texPath+'/'+name+'_'+s[0]+'_'+f+'.'+imgformat)
-            imgPath = imgPath.replace('/','\\')
-            fullPath = str(project+imgPath)
-            
-            if os.path.isfile(fullPath):  # 設定されたパスに画像があるかチェック
-                files = pm.shadingNode('file', asTexture=True,isColorManaged=True)  # Fileノード作成
-                p2t = pm.shadingNode('place2dTexture', asUtility=True)  # P2Tノード作成
-                pm.defaultNavigation(connectToExisting=True, source=p2t, destination=files, f=True)  # 上記のノード接続
-                input = s[0]+'.'+nodeName[i]  # マテリアルのアトリビュートノード名
-                inputSG = s[0]+'SG.'+nodeName[i]  # シェーディングエンジンのアトリビュートノード名（Height用）
-                
-                if(f in ['BaseColor','Normal']):
-                    if(f == 'Normal'):
-                        normal = pm.shadingNode('aiNormalMap', asUtility=True)  # aiノーマルマップ作成
-                        pm.setAttr(files.ignoreColorSpaceFileRules,1)  # カラースペース変更、変更を固定
-                        pm.setAttr(files.cs,"Raw")
-                        files.outColor>>normal.input
-                        normal.outValue>>input
-                    else:
-                        files.outColor>>input
-                else:
-                    pm.setAttr(files.ignoreColorSpaceFileRules,1)  # カラースペース変更、変更を固定
-                    pm.setAttr(files.cs,"Raw")
-                    if(f == 'Height'):
-                        disp = pm.shadingNode('displacementShader', asUtility=True)  # Heightマップ用のディスプレイスメントを作成
-                        files.outAlpha>>disp.displacement
-                        disp.displacement>>inputSG
-                    else:
-                        files.outAlpha>>input
-                pm.setAttr(files.fileTextureName,imgPath)  # Fileノードに画像を設定
-            else:
-                missfile = pm.confirmDialog(t='Error',m=('Image file not found.\nPlease select material and check file path.\n'+'"'+fullPath+'"'),b=['Copy to clipboard','Close'])
-                if missfile == 'Copy to clipboard':
-                    subprocess.run("clip", input=fullPath, text=True)
-                break
+        return
+    
+    for i,f in enumerate(fileName):
+        projpath(texpath,name,s,f,imgformat)
+        if checkPath(fullPath)==False:
+            break
+        nodes = nodecrate(s,i,nodeName)
+        Sorttex(f,nodes[0],nodes[1],nodes[2],imgPath)
 
 # 変数の記憶
 def savecheck(ws):
@@ -112,7 +152,7 @@ def namereplace(ws):
     nodeName=[]
     fileName=[]
     for i in range(6):
-        checks = 'check'+str(i+1)  # チェックが入っているならノードを接続
+        checks = 'check'+str(i+1)  # チェックが入っているものだけリストにする
         if(ws[checks].getValue()):
             nodeName.append(names1[i])
             fileName.append(names2[i])
@@ -120,7 +160,6 @@ def namereplace(ws):
     name = ws['fbx'].getText()
     formats = ['','png','exr','tif']
     imgformat = formats[(pm.optionMenu(ws['format'],q=True,sl=True))]
-    
     texplace(nodeName,fileName,texPath,name,imgformat)
 
 # テクスチャフォルダの名前抽出
@@ -137,7 +176,8 @@ def fbxPath(ws):
     ws['fbx'].setText(str(path2))
     savefbx(ws)
 
-def changeswich(ws):  # チェックボックスが押されていれば実行ボタンを押せる
+# チェックボックスが押されている時のみ実行ボタンを押せる
+def changeswich(ws):
     savecheck(ws)
     for i in range(6):
         checks = 'check'+str(i+1)
