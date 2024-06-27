@@ -208,14 +208,14 @@ def openWindow():
             ws = {}
             pm.button(l='Reset', c=pm.Callback(resetvariable,ws))  # リセット
             with pm.horizontalLayout():
-                ws['check1'] = pm.checkBox(l='BaseColor',v=ch1,cc=pm.Callback(changeswtich,ws))  # 接続したい画像の指定
-                ws['check2'] = pm.checkBox(l='Metalness',v=ch2,cc=pm.Callback(changeswtich,ws))
-                ws['check3'] = pm.checkBox(l='Roughness',v=ch3,cc=pm.Callback(changeswtich,ws))
+                ws['check1'] = pm.checkBox(l='BaseColor',v=ch1,cc=pm.Callback(changeswitch,ws))  # 接続したい画像の指定
+                ws['check2'] = pm.checkBox(l='Metalness',v=ch2,cc=pm.Callback(changeswitch,ws))
+                ws['check3'] = pm.checkBox(l='Roughness',v=ch3,cc=pm.Callback(changeswitch,ws))
             with pm.horizontalLayout():
-                ws['check4'] = pm.checkBox(l='Normal',v=ch4,cc=pm.Callback(changeswtich,ws))
-                ws['check5'] = pm.checkBox(l='Height',v=ch5,cc=pm.Callback(changeswtich,ws))
-                ws['check6'] = pm.checkBox(l='Emissive',v=ch6,cc=pm.Callback(changeswtich,ws))
-                ws['check7'] = pm.checkBox(l='Opacity',v=ch7,cc=pm.Callback(changeswtich,ws))
+                ws['check4'] = pm.checkBox(l='Normal',v=ch4,cc=pm.Callback(changeswitch,ws))
+                ws['check5'] = pm.checkBox(l='Height',v=ch5,cc=pm.Callback(changeswitch,ws))
+                ws['check6'] = pm.checkBox(l='Emissive',v=ch6,cc=pm.Callback(changeswitch,ws))
+                ws['check7'] = pm.checkBox(l='Opacity',v=ch7,cc=pm.Callback(changeswitch,ws))
                 
             with pm.horizontalLayout():
                 ws['path'] = pm.textField(ann='TextureFolder',text=texpath,cc=pm.Callback(savetex,ws))  # テクスチャフォルダの指定（画像を格納しているフォルダ）
