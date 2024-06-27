@@ -13,6 +13,7 @@ def normal(f,files,input,imgPath):
         normal = pm.shadingNode('aiNormalMap', asUtility=True)  # aiノーマルマップ作成
         pm.setAttr(files.ignoreColorSpaceFileRules,1)  # カラースペース変更、変更を固定
         pm.setAttr(files.cs,"Raw")
+        pm.setAttr(files.alphaIsLuminance,1)  # アルファ値に輝度を使用
         files.outColor>>normal.input
         normal.outValue>>input
         pm.setAttr(files.fileTextureName,imgPath)  # Fileノードに画像を設定
@@ -20,6 +21,7 @@ def height(f,files,input,inputSG,imgPath):
     if(f == 'Height'):  # ハイトマップ
         pm.setAttr(files.ignoreColorSpaceFileRules,1)  # カラースペース変更、変更を固定
         pm.setAttr(files.cs,"Raw")
+        pm.setAttr(files.alphaIsLuminance,1)  # アルファ値に輝度を使用
         disp = pm.shadingNode('displacementShader', asUtility=True)  # Heightマップ用のディスプレイスメントを作成
         files.outAlpha>>disp.displacement
         disp.displacement>>inputSG
@@ -28,6 +30,7 @@ def othertex(f,files,input,imgPath):
     if(f in ['Emissive','Metalness','Roughness','Opacity']):  # その他グレースケールテクスチャ
         pm.setAttr(files.ignoreColorSpaceFileRules,1)  # カラースペース変更、変更を固定
         pm.setAttr(files.cs,"Raw")
+        pm.setAttr(files.alphaIsLuminance,1)  # アルファ値に輝度を使用
         files.outAlpha>>input
         pm.setAttr(files.fileTextureName,imgPath)  # Fileノードに画像を設定
         return
