@@ -25,7 +25,7 @@ def height(f,files,input,inputSG,imgPath):
         disp.displacement>>inputSG
         pm.setAttr(files.fileTextureName,imgPath)  # Fileノードに画像を設定
 def othertex(f,files,input,imgPath):
-    if(f in ['Emissive','Metalness','Roughness']):  # その他グレースケールテクスチャ
+    if(f in ['Emissive','Metalness','Roughness','Opacity']):  # その他グレースケールテクスチャ
         pm.setAttr(files.ignoreColorSpaceFileRules,1)  # カラースペース変更、変更を固定
         pm.setAttr(files.cs,"Raw")
         files.outAlpha>>input
@@ -41,9 +41,9 @@ def Sorttex(f,files,input,inputSG,imgPath):
         normal(f,files,input,imgPath)
         return
     if(f == 'Height'):    
-        height(f,files,input,imgPath)
+        height(f,files,input,inputSG,imgPath)
         return
-    if(f in ['Emissive','Metalness','Roughness']):  
+    if(f in ['Emissive','Metalness','Roughness','Opacity']):  
         othertex(f,files,input,imgPath)
     
 # ノード作成
@@ -52,7 +52,9 @@ def nodecrate(s,i,nodeName):
     p2t = pm.shadingNode('place2dTexture', asUtility=True)  # P2Tノード作成
     pm.defaultNavigation(connectToExisting=True, source=p2t, destination=files, f=True)  # 上記のノード接続
     input = s[0]+'.'+nodeName[i]  # マテリアルのアトリビュートノード名
-    inputSG = s[0]+'SG.'+nodeName[i]  # シェーディングエンジンのアトリビュートノード名（Height用）
+    
+    inputSG = pm.listConnections(s[0],s=False)
+    inputSG = inputSG[0]+'.'+nodeName[i]  # シェーディングエンジンのアトリビュートノード名（Height用）
     return(files,input,inputSG)
     
     
@@ -91,7 +93,7 @@ def texplace(nodeName,fileName,texPath,name,imgformat):
 
 # 変数の記憶
 def savecheck(ws):
-    chlist = [0,0,0,0,0,0]
+    chlist = [0,0,0,0,0,0,0]
     for i,c in enumerate(chlist):  # チェックリストの保存
         chs = 'check'+str(i+1)
         chlist[i] = ws[chs].getValue()
@@ -117,7 +119,7 @@ def loadvar():
     if (pm.optionVar(ex='checklist')==True):  # 前回の設定読み込みまたは新規で作成
         chlist = pm.optionVar['checklist']
     else:
-        chlist = [0,0,0,0,0,0]
+        chlist = [0,0,0,0,0,0,0]
     if (pm.optionVar(ex='texPath')==True):
         texpath = pm.optionVar['texPath']
     else:
@@ -134,7 +136,7 @@ def loadvar():
 
 # 入力リセット
 def resetvariable(ws):
-    pm.optionVar['checklist'] = [0,0,0,0,0,0]
+    pm.optionVar['checklist'] = [0,0,0,0,0,0,0]
     pm.optionVar['texPath'] = 'sourceimages\\texture\\'
     pm.optionVar['fbxPath'] = ''
     pm.optionVar['imgformat'] = 1
@@ -148,11 +150,11 @@ def resetvariable(ws):
 
 # ノード接続用の名前変更
 def namereplace(ws):
-    names1 = ['baseColor','emission','specular','specularRoughness','normalCamera','displacementShader']
-    names2 = ['BaseColor','Emissive','Metalness','Roughness','Normal','Height']
+    names1 = ['baseColor','specular','specularRoughness','normalCamera','displacementShader','emission','transmission']
+    names2 = ['BaseColor','Metalness','Roughness','Normal','Height','Emissive','Opacity']
     nodeName=[]
     fileName=[]
-    for i in range(6):
+    for i in range(7):
         checks = 'check'+str(i+1)  # チェックが入っているものだけリストにする
         if(ws[checks].getValue()):
             nodeName.append(names1[i])
@@ -191,7 +193,10 @@ def changeswich(ws):
 # ウィンドウ作成
 def openWindow():
     load = loadvar()  # 前回の変数呼び出し
-    ch1,ch2,ch3,ch4,ch5,ch6 = load[0]
+    try:
+        ch1,ch2,ch3,ch4,ch5,ch6,ch7 = load[0]
+    except ValueError:
+        ch1,ch2,ch3,ch4,ch5,ch6,ch7 = [0,0,0,0,0,0,0]
     texpath = load[1]
     fbxpath = load[2]
     imgformat = load[3]
@@ -205,12 +210,13 @@ def openWindow():
             pm.button(l='Reset', c=pm.Callback(resetvariable,ws))  # リセット
             with pm.horizontalLayout():
                 ws['check1'] = pm.checkBox(l='BaseColor',v=ch1,cc=pm.Callback(changeswich,ws))  # 接続したい画像の指定
-                ws['check2'] = pm.checkBox(l='Emissive',v=ch2,cc=pm.Callback(changeswich,ws))
-                ws['check3'] = pm.checkBox(l='Metalness',v=ch3,cc=pm.Callback(changeswich,ws))
+                ws['check2'] = pm.checkBox(l='Metalness',v=ch2,cc=pm.Callback(changeswich,ws))
+                ws['check3'] = pm.checkBox(l='Roughness',v=ch3,cc=pm.Callback(changeswich,ws))
             with pm.horizontalLayout():
-                ws['check4'] = pm.checkBox(l='Roughness',v=ch4,cc=pm.Callback(changeswich,ws))
-                ws['check5'] = pm.checkBox(l='Normal',v=ch5,cc=pm.Callback(changeswich,ws))
-                ws['check6'] = pm.checkBox(l='Height',v=ch6,cc=pm.Callback(changeswich,ws))
+                ws['check4'] = pm.checkBox(l='Normal',v=ch4,cc=pm.Callback(changeswich,ws))
+                ws['check5'] = pm.checkBox(l='Height',v=ch5,cc=pm.Callback(changeswich,ws))
+                ws['check6'] = pm.checkBox(l='Emissive',v=ch6,cc=pm.Callback(changeswich,ws))
+                ws['check7'] = pm.checkBox(l='Opacity',v=ch7,cc=pm.Callback(changeswich,ws))
                 
             with pm.horizontalLayout():
                 ws['path'] = pm.textField(ann='TextureFolder',text=texpath,cc=pm.Callback(savetex,ws))  # テクスチャフォルダの指定（画像を格納しているフォルダ）
