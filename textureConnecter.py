@@ -66,12 +66,13 @@ def checkPath(fullPath):
     return (os.path.isfile(fullPath))
             
 # テクスチャフォルダパスの調整
-def projpath(texpath,name,s,f,imgformat):
-    project = pm.workspace(q=True,lw=True)  # パスの調整
-    project = str(project[1].replace('/','\\')+'\\')
+def projpath(texPath,name,s,f,imgformat):
+    project = pm.workspace(q=True,fn=True)  # パスの調整
+    project = str(project.replace('/','\\')+'\\')
     imgPath = str(texPath+'/'+name+'_'+s[0]+'_'+f+'.'+imgformat)
     imgPath = imgPath.replace('/','\\')
     fullPath = str(project+imgPath)
+    return(fullPath,imgPath)
 
 # 本体
 def texplace(nodeName,fileName,texPath,name,imgformat):
@@ -82,11 +83,11 @@ def texplace(nodeName,fileName,texPath,name,imgformat):
         return
     
     for i,f in enumerate(fileName):
-        projpath(texpath,name,s,f,imgformat)
-        if checkPath(fullPath)==False:
+        path = projpath(texPath,name,s,f,imgformat)
+        if checkPath(path[0])==False:
             break
         nodes = nodecrate(s,i,nodeName)
-        Sorttex(f,nodes[0],nodes[1],nodes[2],imgPath)
+        Sorttex(f,nodes[0],nodes[1],nodes[2],path[1])
 
 # 変数の記憶
 def savecheck(ws):
