@@ -11,7 +11,7 @@ AdobeSubstancePainterで出力したテクスチャをMayaに簡単にアサイ�
 2.以下のコマンドを実行する。
 ```
 import textureConnecter
-textureConnecter.openwindow()
+textureConnecter.openWindow()
 ```
 ## 説明
 1.Substance PainterでArnoldテンプレートを使用し、テクスチャを出力する。  
