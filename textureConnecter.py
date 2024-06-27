@@ -234,4 +234,3 @@ def openWindow():
                 ws['button1'] = pm.button(l='Connect', c=pm.Callback(namereplace, ws),en=False)  # 本体の実行
                 pm.button(l='Close', c=pm.Callback(pm.deleteUI,winname))  # クローズボタンで閉じたときの処理
             changeswitch(ws)  # 実行可能かの確認
-openWindow()
