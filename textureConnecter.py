@@ -5,11 +5,9 @@ import subprocess
 
 # 接続
 def baseColor(f,files,input,imgPath):  # ベースカラー
-    if(f == 'BaseColor'):
         files.outColor>>input
         pm.setAttr(files.fileTextureName,imgPath)  # Fileノードに画像を設定
 def normal(f,files,input,imgPath):
-    if(f == 'Normal'):  # ノーマルマップ
         normal = pm.shadingNode('aiNormalMap', asUtility=True)  # aiノーマルマップ作成
         pm.setAttr(files.ignoreColorSpaceFileRules,1)  # カラースペース変更、変更を固定
         pm.setAttr(files.cs,"Raw")
@@ -18,7 +16,6 @@ def normal(f,files,input,imgPath):
         normal.outValue>>input
         pm.setAttr(files.fileTextureName,imgPath)  # Fileノードに画像を設定
 def height(f,files,input,inputSG,imgPath):
-    if(f == 'Height'):  # ハイトマップ
         pm.setAttr(files.ignoreColorSpaceFileRules,1)  # カラースペース変更、変更を固定
         pm.setAttr(files.cs,"Raw")
         pm.setAttr(files.alphaIsLuminance,1)  # アルファ値に輝度を使用
@@ -27,7 +24,6 @@ def height(f,files,input,inputSG,imgPath):
         disp.displacement>>inputSG
         pm.setAttr(files.fileTextureName,imgPath)  # Fileノードに画像を設定
 def othertex(f,files,input,imgPath):
-    if(f in ['Emissive','Metalness','Roughness','Opacity']):  # その他グレースケールテクスチャ
         pm.setAttr(files.ignoreColorSpaceFileRules,1)  # カラースペース変更、変更を固定
         pm.setAttr(files.cs,"Raw")
         pm.setAttr(files.alphaIsLuminance,1)  # アルファ値に輝度を使用
@@ -37,7 +33,7 @@ def othertex(f,files,input,imgPath):
         
 # 画像の分類
 def Sorttex(f,files,input,inputSG,imgPath):
-    if(f == 'BaseColor'):    
+    if(f in ['BaseColor','Opacity']):    
         baseColor(f,files,input,imgPath)
         return
     if(f == 'Normal'):    
@@ -46,7 +42,7 @@ def Sorttex(f,files,input,inputSG,imgPath):
     if(f == 'Height'):    
         height(f,files,input,inputSG,imgPath)
         return
-    if(f in ['Emissive','Metalness','Roughness','Opacity']):  
+    if(f in ['Emissive','Metalness','Roughness']):  
         othertex(f,files,input,imgPath)
     
 # ノード作成
@@ -153,7 +149,7 @@ def resetvariable(ws):
 
 # ノード接続用の名前変更
 def namereplace(ws):
-    names1 = ['baseColor','specular','specularRoughness','normalCamera','displacementShader','emission','transmission']
+    names1 = ['baseColor','specular','specularRoughness','normalCamera','displacementShader','emission','opacity']
     names2 = ['BaseColor','Metalness','Roughness','Normal','Height','Emissive','Opacity']
     nodeName=[]
     fileName=[]
@@ -183,7 +179,7 @@ def fbxPath(ws):
     savefbx(ws)
 
 # チェックボックスが押されている時のみ実行ボタンを押せる
-def changeswich(ws):
+def changeswitch(ws):
     savecheck(ws)
     for i in range(6):
         checks = 'check'+str(i+1)
@@ -212,14 +208,14 @@ def openWindow():
             ws = {}
             pm.button(l='Reset', c=pm.Callback(resetvariable,ws))  # リセット
             with pm.horizontalLayout():
-                ws['check1'] = pm.checkBox(l='BaseColor',v=ch1,cc=pm.Callback(changeswich,ws))  # 接続したい画像の指定
-                ws['check2'] = pm.checkBox(l='Metalness',v=ch2,cc=pm.Callback(changeswich,ws))
-                ws['check3'] = pm.checkBox(l='Roughness',v=ch3,cc=pm.Callback(changeswich,ws))
+                ws['check1'] = pm.checkBox(l='BaseColor',v=ch1,cc=pm.Callback(changeswtich,ws))  # 接続したい画像の指定
+                ws['check2'] = pm.checkBox(l='Metalness',v=ch2,cc=pm.Callback(changeswtich,ws))
+                ws['check3'] = pm.checkBox(l='Roughness',v=ch3,cc=pm.Callback(changeswtich,ws))
             with pm.horizontalLayout():
-                ws['check4'] = pm.checkBox(l='Normal',v=ch4,cc=pm.Callback(changeswich,ws))
-                ws['check5'] = pm.checkBox(l='Height',v=ch5,cc=pm.Callback(changeswich,ws))
-                ws['check6'] = pm.checkBox(l='Emissive',v=ch6,cc=pm.Callback(changeswich,ws))
-                ws['check7'] = pm.checkBox(l='Opacity',v=ch7,cc=pm.Callback(changeswich,ws))
+                ws['check4'] = pm.checkBox(l='Normal',v=ch4,cc=pm.Callback(changeswtich,ws))
+                ws['check5'] = pm.checkBox(l='Height',v=ch5,cc=pm.Callback(changeswtich,ws))
+                ws['check6'] = pm.checkBox(l='Emissive',v=ch6,cc=pm.Callback(changeswtich,ws))
+                ws['check7'] = pm.checkBox(l='Opacity',v=ch7,cc=pm.Callback(changeswtich,ws))
                 
             with pm.horizontalLayout():
                 ws['path'] = pm.textField(ann='TextureFolder',text=texpath,cc=pm.Callback(savetex,ws))  # テクスチャフォルダの指定（画像を格納しているフォルダ）
@@ -237,5 +233,5 @@ def openWindow():
             with pm.horizontalLayout():
                 ws['button1'] = pm.button(l='Connect', c=pm.Callback(namereplace, ws),en=False)  # 本体の実行
                 pm.button(l='Close', c=pm.Callback(pm.deleteUI,winname))  # クローズボタンで閉じたときの処理
-            changeswich(ws)  # 実行可能かの確認
+            changeswitch(ws)  # 実行可能かの確認
 openWindow()
