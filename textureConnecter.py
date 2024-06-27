@@ -56,7 +56,7 @@ def nodecrate(s,i,nodeName):
     pm.defaultNavigation(connectToExisting=True, source=p2t, destination=files, f=True)  # 上記のノード接続
     input = s[0]+'.'+nodeName[i]  # マテリアルのアトリビュートノード名
     
-    inputSG = pm.listConnections(s[0],s=False)
+    inputSG = s[0].shadingGroups()
     inputSG = inputSG[0]+'.'+nodeName[i]  # シェーディングエンジンのアトリビュートノード名（Height用）
     return(files,input,inputSG)
     
