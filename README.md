@@ -1,6 +1,6 @@
 # texture-Connector
 
-![screenshot](images/texconnect_window.png)  
+![screenshot](images/texconnect_window.PNG)  
 [English](README_EN.md)
 ## 概要
 AdobeSubstancePainterで出力したテクスチャをMayaに簡単にアサインするツールです。
