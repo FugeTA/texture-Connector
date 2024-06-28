@@ -16,10 +16,8 @@ textureConnecter.openWindow()
 ## 説明
 1.Substance PainterでArnoldテンプレートを使用し、テクスチャを出力する。  
 2.maya内でHypershade上でマテリアルを選択する。（マテリアル名を変更しないこと）  
-3.画像ファイルの入っているフォルダを選択する。  
-4.Substance Painterに使用したFBXを選択する。  
-5.画像形式を選択する。  
-6."Connect" ボタンで実行する。
+3.画像ファイルの入っているフォルダを選択する。    
+4."Connect" ボタンで実行する。
 ## 作者
 [Twitter](https://x.com/cotte_921)
 
