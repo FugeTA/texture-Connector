@@ -1,12 +1,13 @@
 import pymel.core as pm
-import os
 import re
 import subprocess
+import pathlib
 
 # 接続
 def baseColor(f,files,input,imgPath):  # ベースカラー
         files.outColor>>input
         pm.setAttr(files.fileTextureName,imgPath)  # Fileノードに画像を設定
+
 def normal(f,files,input,imgPath):
         normal = pm.shadingNode('aiNormalMap', asUtility=True)  # aiノーマルマップ作成
         pm.setAttr(files.ignoreColorSpaceFileRules,1)  # カラースペース変更、変更を固定
@@ -15,6 +16,7 @@ def normal(f,files,input,imgPath):
         files.outColor>>normal.input
         normal.outValue>>input
         pm.setAttr(files.fileTextureName,imgPath)  # Fileノードに画像を設定
+
 def height(f,files,input,inputSG,imgPath):
         pm.setAttr(files.ignoreColorSpaceFileRules,1)  # カラースペース変更、変更を固定
         pm.setAttr(files.cs,"Raw")
@@ -23,6 +25,7 @@ def height(f,files,input,inputSG,imgPath):
         files.outAlpha>>disp.displacement
         disp.displacement>>inputSG
         pm.setAttr(files.fileTextureName,imgPath)  # Fileノードに画像を設定
+
 def othertex(f,files,input,imgPath):
         pm.setAttr(files.ignoreColorSpaceFileRules,1)  # カラースペース変更、変更を固定
         pm.setAttr(files.cs,"Raw")
@@ -30,10 +33,10 @@ def othertex(f,files,input,imgPath):
         files.outAlpha>>input
         pm.setAttr(files.fileTextureName,imgPath)  # Fileノードに画像を設定
         return
-        
+
 # 画像の分類
 def Sorttex(f,files,input,inputSG,imgPath):
-    if(f in ['BaseColor','Opacity']):    
+    if(f in ['Base','Opacity']):    
         baseColor(f,files,input,imgPath)
         return
     if(f == 'Normal'):    
@@ -42,50 +45,61 @@ def Sorttex(f,files,input,inputSG,imgPath):
     if(f == 'Height'):    
         height(f,files,input,inputSG,imgPath)
         return
-    if(f in ['Emissive','Metalness','Roughness']):  
+    if(f in ['Emissive','Metal','Roughness']):  
         othertex(f,files,input,imgPath)
-    
+
 # ノード作成
 def nodecrate(s,i,nodeName):
     files = pm.shadingNode('file', asTexture=True,isColorManaged=True)  # Fileノード作成
     p2t = pm.shadingNode('place2dTexture', asUtility=True)  # P2Tノード作成
     pm.defaultNavigation(connectToExisting=True, source=p2t, destination=files, f=True)  # 上記のノード接続
     input = s[0]+'.'+nodeName[i]  # マテリアルのアトリビュートノード名
-    
     inputSG = s[0].shadingGroups()
     inputSG = inputSG[0]+'.'+nodeName[i]  # シェーディングエンジンのアトリビュートノード名（Height用）
     return(files,input,inputSG)
-    
-    
-    
+
 # パスの確認
-def checkPath(fullPath,lan):
-    if os.path.isfile(fullPath)==False:  # 設定されたパスに画像があるかチェック
-        missfile = pm.confirmDialog(t='Error',m=errorlanguage(lan,fullPath)[1],b=[(errorlanguage(lan,'')[2]),(errorlanguage(lan,'')[3])])
-        if missfile == (errorlanguage(lan,'')[2]):
+def checkPath(nodeName,fullPath,lan,errors):
+    path = pathlib.Path(fullPath)
+    if path.exists()==False or errors == 1:  # 設定されたパスに画像があるかチェック
+        missfile = pm.confirmDialog(t='Error',m=errorlanguage(nodeName,lan,fullPath)[1],b=[(errorlanguage(nodeName,lan,'')[2]),(errorlanguage(nodeName,lan,'')[3])])
+        if missfile == (errorlanguage(nodeName,lan,'')[2]):
             subprocess.run("clip", input=fullPath, text=True)  # WindowsのClipを使用してクリップボードにコピー
-    return (os.path.isfile(fullPath))
-            
+        return (False)
+    return (True)
+
 # テクスチャフォルダパスの調整
-def projpath(texPath,name,s,f,imgformat):
+def projpath(fileName,texPath,s,f):
+    errors = 0
     project = pm.workspace(q=True,fn=True)  # パスの調整
     project = str(project.replace('/','\\')+'\\')
-    imgPath = str(texPath+'/'+name+'_'+s[0]+'_'+f+'.'+imgformat)
-    imgPath = imgPath.replace('/','\\')
-    fullPath = str(project+imgPath)
-    return(fullPath,imgPath)
+    n = (project+texPath)
+    n = str(n.replace('/','\\'))
+    p = pathlib.Path(n)
+    rex = '*'+s[0]+'_'+fileName+'*'
+    for i in list(p.glob(rex)):
+        if i.suffix in '.tx':
+            continue
+        else:
+            fullPath = str(i)
+            break
+    try:
+        fullPath
+    except NameError:
+        fullPath = n
+        errors = 1
+    imgPath = str(re.sub('.*sourceimages','sourceimages',fullPath))
+    return(fullPath,imgPath,errors)
 
 # 本体
-def texplace(nodeName,fileName,texPath,name,imgformat,lan):
+def texplace(nodeName,fileName,texPath,lan):
     s = pm.ls(sl=True)
-    
-    if s == []:
-        pm.confirmDialog(t='Error',m=(errorlanguage(lan,'')[0]),b=(errorlanguage(lan,'')[3]))
-        return
-    
     for i,f in enumerate(fileName):
-        path = projpath(texPath,name,s,f,imgformat)
-        if checkPath(path[0],lan)==False:
+        if s == []:
+            pm.confirmDialog(t='Error',m=(errorlanguage(nodeName[i],lan,'')[0]),b=(errorlanguage(nodeName[i],lan,'')[3]))
+            break
+        path = projpath(fileName[i],texPath,s,f)
+        if checkPath(nodeName[i],path[0],lan,path[2])==False:
             break
         nodes = nodecrate(s,i,nodeName)
         Sorttex(f,nodes[0],nodes[1],nodes[2],path[1])
@@ -97,22 +111,14 @@ def savecheck(ws):
         chs = 'check'+str(i+1)
         chlist[i] = ws[chs].getValue()
     pm.optionVar['checklist'] = chlist  # データをuserPrefs.melに保存
+
 def savetex(ws):
     if ws['path'].getText() != 'sourceimages/texture/':  # テクスチャフォルダパスの保存
         path = ws['path'].getText()  # データをuserPrefs.melに保存
     else:
         path = 'sourceimages\\texture\\'
     pm.optionVar['texPath'] = path  # データをuserPrefs.melに保存
-def savefbx(ws):
-    if ws['fbx'].getText() != '':  # FBXファイルパスの保存
-        fbx = ws['fbx'].getText()
-    else:
-        fbx= ''
-    pm.optionVar['fbxPath'] = fbx  # データをuserPrefs.melに保存
-def saveformat(ws):
-    imgformat = pm.optionMenu(ws['format'],q=True,sl=True)  # 画像形式の保存
-    pm.optionVar['imgformat'] = imgformat  # データをuserPrefs.melに保存
-    
+
 def savelang(ws):
     lan = pm.optionMenu(ws['lang'],q=True,sl=True)  # 画像形式の保存
     pm.optionVar['texlanguage'] = lan  # データをuserPrefs.melに保存
@@ -127,41 +133,31 @@ def loadvar():
         texpath = pm.optionVar['texPath']
     else:
         texpath = 'sourceimages\\texture\\'
-    if (pm.optionVar(ex='fbxPath')==True):
-        fbxpath = pm.optionVar['fbxPath']
-    else:
-        fbxpath = ''
-    if (pm.optionVar(ex='imgformat')==True):
-        imgformat = pm.optionVar['imgformat']
-    else:
-        imgformat = 1
+        
     if (pm.optionVar(ex='texlanguage')==True):
         lan = pm.optionVar['texlanguage']
     else:
         lan = 1
-    return [chlist,texpath,fbxpath,imgformat,lan]
+    return [chlist,texpath,lan]
 
 # 入力リセット
 def resetvariable(ws):
     pm.optionVar['checklist'] = [0,0,0,0,0,0,0]
     pm.optionVar['texPath'] = 'sourceimages\\texture\\'
-    pm.optionVar['fbxPath'] = ''
     pm.optionVar['imgformat'] = 1
     pm.optionVar['lang'] = 1
     for i in range(6):
         chs = 'check'+str(i+1)
         ws[chs].setValue(0)
     ws['path'].setText('sourceimages\\texture\\')
-    ws['fbx'].setText('')
-    pm.optionMenu(ws['format'],e=True,sl=1)
     pm.optionMenu(ws['lang'],e=True,sl=1)
     winlanguage(ws)
-    pm.button(ws['button3'],e=True,en=False)
+    pm.button(ws['button2'],e=True,en=False)
 
 # ノード接続用の名前変更
 def namereplace(ws):
     names1 = ['baseColor','specular','specularRoughness','normalCamera','displacementShader','emission','opacity']
-    names2 = ['BaseColor','Metalness','Roughness','Normal','Height','Emissive','Opacity']
+    names2 = ['Base','Metal','Roughness','Normal','Height','Emissive','Opacity']
     nodeName=[]
     fileName=[]
     for i in range(7):
@@ -170,11 +166,9 @@ def namereplace(ws):
             nodeName.append(names1[i])
             fileName.append(names2[i])
     texPath = ws['path'].getText()
-    name = ws['fbx'].getText()
     formats = ['','png','exr','tif']
     lan = pm.optionMenu(ws['lang'],q=True,sl=True)
-    imgformat = formats[(pm.optionMenu(ws['format'],q=True,sl=True))]
-    texplace(nodeName,fileName,texPath,name,imgformat,lan)
+    texplace(nodeName,fileName,texPath,lan)
 
 # テクスチャフォルダの名前抽出
 def texPath(ws):
@@ -183,45 +177,37 @@ def texPath(ws):
     ws['path'].setText(str(path2))
     savetex(ws)
 
-# FBXファイルの名前抽出
-def fbxPath(ws):
-    path = pm.fileDialog2(fm=1,okc='Select',dir=(pm.workspace(q=True,rootDirectory=True)))
-    path2= os.path.splitext(os.path.basename(path[0]))[0]
-    ws['fbx'].setText(str(path2))
-    savefbx(ws)
-
 # チェックボックスが押されている時のみ実行ボタンを押せる
 def changeswitch(ws):
     savecheck(ws)
     for i in range(7):
         checks = 'check'+str(i+1)
         if(ws[checks].getValue()):
-            pm.button(ws['button3'],e=True,en=True)
+            ws['button2'].setEnable(1)
             break
     else:
-        pm.button(ws['button3'],e=True,en=False)
+        ws['button2'].setEnable(0)
 
 # 言語設定
 def winlanguage(ws):
-    en = ['BaseColor','Metalness','Roughness','Normal','Height','Emissive','Opacity','Texture Folder','FBX file','Connect','Close','Reset','ImageFormat','Language']
-    jp = ['BaseColor','Metalness','Roughness','Normal','Height','Emissive','Opacity','テクスチャフォルダ','FBXファイル','接続','閉じる','リセット','画像形式','言語']
-    if (pm.optionMenu(ws['lang'],q=True,sl=True))==1:
+    en = ['BaseColor','Metalness','Roughness','Normal','Height','Emissive','Opacity','Texture Folder','Connect','Close','Reset','Language']
+    jp = ['BaseColor','Metalness','Roughness','Normal','Height','Emissive','Opacity','テクスチャフォルダ','接続','閉じる','リセット','言語']
+    if (ws['lang'].getSelect())==1:
         ln = en
     else:
         ln = jp
     for i in range(7):
         chs = 'check'+str(i+1)
-        pm.checkBox(ws[chs],e=True,l=ln[i])
-    for i in range(5):
+        ws[chs].setLabel(ln[i])
+    for i in range(4):
         btn = 'button'+str(i+1)
-        pm.button(ws[btn],e=True,l=ln[i+7])
-    pm.optionMenu(ws['format'],e=True,l=ln[12])
-    pm.optionMenu(ws['lang'],e=True,l=ln[13])
+        ws[btn].setLabel(ln[i+7])
+    ws['lang'].setLabel(ln[11])
     savelang(ws)
-    
-def errorlanguage(lan,fullPath):
-    en = ['Plese select a Material','Image file not found.\nPlease select material and check file path.\n'+'"'+fullPath+'"','Copy to clipboard','Close']
-    jp = ['マテリアルを選択してください。','画像が見つかりません。\n正しいマテリアルを選択しているか、またはパスを確認してください。\n'+'"'+fullPath+'"','クリップボードにコピー','閉じる']
+
+def errorlanguage(nodeName,lan,fullPath):
+    en = ['Plese select a Material',nodeName+' file not found.\nPlease select material and check file path.\n'+'"'+fullPath+'"','Copy to clipboard','Close']
+    jp = ['マテリアルを選択してください。',nodeName+' ファイルが見つかりません。\n正しいマテリアルを選択しているか、または以下のフォルダに画像があるかを確認してください。\n'+'"'+fullPath+'"','クリップボードにコピー','閉じる']
     if lan==1:
         return en
     return jp
@@ -234,8 +220,6 @@ def openWindow():
     except ValueError:
         ch1,ch2,ch3,ch4,ch5,ch6,ch7 = [0,0,0,0,0,0,0]
     texpath = load[1]
-    fbxpath = load[2]
-    imgformat = load[3]
     
     winname = 'Texture_Connect'  # ウィンドウの名前
     if pm.window(winname,ex=True)==True:  # すでにウィンドウがあれば閉じてから開く
@@ -247,7 +231,7 @@ def openWindow():
                 ws['lang'] = pm.optionMenu(l='言語',cc=pm.Callback(winlanguage,ws))  # 画像形式の指定
                 pm.menuItem(l="English")
                 pm.menuItem(l="日本語")
-                ws['button5'] = pm.button(c=pm.Callback(resetvariable,ws))  # リセット
+                ws['button4'] = pm.button(c=pm.Callback(resetvariable,ws))  # リセット
             with pm.horizontalLayout():
                 ws['check1'] = pm.checkBox(v=ch1,cc=pm.Callback(changeswitch,ws))  # 接続したい画像の指定
                 ws['check2'] = pm.checkBox(v=ch2,cc=pm.Callback(changeswitch,ws))
@@ -261,21 +245,10 @@ def openWindow():
             with pm.horizontalLayout():
                 ws['path'] = pm.textField(text=texpath,cc=pm.Callback(savetex,ws))  # テクスチャフォルダの指定（画像を格納しているフォルダ）
                 ws['button1'] = pm.button(c=pm.Callback(texPath,ws))
-            with pm.horizontalLayout():
-                ws['fbx'] = pm.textField(text=fbxpath,cc=pm.Callback(savefbx,ws))  # FBXファイルの指定
-                ws['button2'] = pm.button(c=pm.Callback(fbxPath,ws))
                 
-            ws['format'] = pm.optionMenu(cc=pm.Callback(saveformat,ws))  # 画像形式の指定
-            ws['menu1'] = pm.menuItem(l="PNG")
-            ws['menu2'] = pm.menuItem(l="EXR")
-            ws['menu3'] = pm.menuItem(l="TIFF")
-            pm.optionMenu(ws['format'],e=True,sl=imgformat)  # 画像形式の呼び出し
-            
             with pm.horizontalLayout():
-                ws['button3'] = pm.button(c=pm.Callback(namereplace, ws),en=False)  # 本体の実行
-                ws['button4'] =pm.button(c=pm.Callback(pm.deleteUI,winname))  # クローズボタンで閉じたときの処理
-            pm.optionMenu(ws['lang'],e=True,sl=load[4])
+                ws['button2'] = pm.button(c=pm.Callback(namereplace, ws),en=False)  # 本体の実行
+                ws['button3'] =pm.button(c=pm.Callback(pm.deleteUI,winname))  # クローズボタンで閉じたときの処理
+            pm.optionMenu(ws['lang'],e=True,sl=load[2])
             winlanguage(ws)
             changeswitch(ws)  # 実行可能かの確認
-            
-openWindow()
