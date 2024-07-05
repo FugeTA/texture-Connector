@@ -8,11 +8,13 @@ def baseColor(f,files,input,imgPath):  # ベースカラー
     files.outColor>>input
     pm.setAttr(files.fileTextureName,imgPath)  # Fileノードに画像を設定
 
-def normal(f,files,input,imgPath,rs):
+def normal(f,files,input,imgPath,rs,p2t):
     if rs==1:
         normal = pm.shadingNode('aiNormalMap', asUtility=True)  # aiノーマルマップ作成
         normal.outValue>>input
     else:
+        pm.delete(files)
+        pm.delete(p2t)
         normal = pm.shadingNode('RedshiftNormalMap', asUtility=True)  # rsノーマルマップ作成
         normal.outDisplacementVector>>input
         normal.tex0.set(imgPath)
@@ -45,12 +47,12 @@ def othertex(f,files,input,imgPath):
     pm.setAttr(files.fileTextureName,imgPath)  # Fileノードに画像を設定
 
 # 画像の分類
-def Sorttex(f,files,input,inputSG,imgPath,rs):
+def Sorttex(f,files,input,inputSG,imgPath,rs,p2t):
     if(f in ['Base','Color','Opacity']):    
         baseColor(f,files,input,imgPath)
         return
     if(f == 'Normal'):    
-        normal(f,files,input,imgPath,rs)
+        normal(f,files,input,imgPath,rs,p2t)
         return
     if(f in ['Height','Displace']):    
         height(f,files,input,inputSG,imgPath,rs)
@@ -65,7 +67,7 @@ def nodecrate(s,i,nodeName):
     pm.defaultNavigation(connectToExisting=True, source=p2t, destination=files, f=True)  # 上記のノード接続
     input = s[0]+'.'+nodeName[i]  # マテリアルのアトリビュートノード名
     inputSG = pm.listConnections(s[0],s=False,t='shadingEngine')[0]  # シェーディングエンジンのアトリビュートノード名（Height用）
-    return(files,input,inputSG)
+    return(files,input,inputSG,p2t)
 
 # パスの確認
 def checkPath(nodeName,fullPath,lan):
@@ -110,7 +112,7 @@ def texplace(nodeName,fileName,texPath,lan,rs):
         if checkPath(nodeName[i],path[0],lan)==False:
             break
         nodes = nodecrate(s,i,nodeName)
-        Sorttex(f,nodes[0],nodes[1],nodes[2],path[1],rs)
+        Sorttex(f,nodes[0],nodes[1],nodes[2],path[1],rs,nodes[3])
 
 # 変数の記憶
 def savecheck(ws):
