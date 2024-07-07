@@ -175,15 +175,15 @@ def resetvariable(ws):
 def materialNodeNames(v):
     if v==1:
         #ss&aiss
-        names1 = ['baseColor','specular','specularRoughness','normalCamera','displacementShader','emission','opacity']
+        names1 = ['baseColor','metalness','specularRoughness','normalCamera','displacementShader','emission','opacity']
         names2 = ['Base','Metal','Roughness','Normal','Height','Emission','Opacity']
     elif v==2:
         #rsm
-        names1 = ['diffuse_color','refl_weight','refl_roughness','bump_input','displacementShader','emission_color','opacity_color']
+        names1 = ['diffuse_color','metalness','refl_roughness','bump_input','displacementShader','emission_color','opacity_color']
         names2 = ['Color','Metal','Roughness','Normal','Displace','Emission','Opacity']
     elif v==3:
         #rssm
-        names1 = ['base_color','refl_weight','refl_roughness','bump_input','displacementShader','emission_color','opacity_color']
+        names1 = ['base_color','metalness','refl_roughness','bump_input','displacementShader','emission_color','opacity_color']
         names2 = ['Color','Metal','Roughness','Normal','Displace','Emission','Opacity']
     return([names1,names2])
     
