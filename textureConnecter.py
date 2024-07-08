@@ -58,7 +58,7 @@ def Sorttex(f,files,input,inputSG,imgPath,rs,p2t):
     if(f in ['Height','Displace']):    
         height(f,files,input,inputSG,imgPath,rs)
         return
-    if(f in ['Emissive','Emission','Metal','Roughness']):  
+    if(f in ['Emissive','Metal','Roughness']):  
         othertex(f,files,input,imgPath)
 
 # ノード作成
@@ -73,45 +73,48 @@ def nodecrate(s,i,nodeName):
 # パスの確認
 def checkPath(nodeName,fullPath,lan,s):
     path = pathlib.Path(fullPath)
-    if path.is_file()==False :  # 設定されたパスに画像があるかチェック
-        missfile = pm.confirmDialog(t='Error',m=errorlanguage(nodeName,lan,fullPath)[1],b=[(errorlanguage(nodeName,lan,'')[3]),(errorlanguage(nodeName,lan,'')[4])])
-        if missfile == (errorlanguage(nodeName,lan,'')[2]):
-            subprocess.run("clip", input=fullPath, text=True)  # WindowsのClipを使用してクリップボードにコピー
-        return (False)
     t = path.stem
     t = t.split('_')
     found = False
-    for i in range(len(t)):
+    for i in range(len(t)):  # 画像名とがあるかチェック
         l=list(itertools.combinations(t, i))
         for j in l:
             if s[0] == str('_'.join(j)):
                 found = True
                 break
     if found == False:
-        pm.confirmDialog(t='Error',m=errorlanguage(nodeName,lan,fullPath)[2],b=errorlanguage(nodeName,lan,'')[4])
         return(False)
-    
     return (True)
 
 # テクスチャフォルダパスの調整
-def projpath(fileName,texPath,s,f):
+def projpath(nodeName,fileName,texPath,s,f,lan):
     project = pm.workspace(q=True,fn=True)  # パスの調整
     project = str(project.replace('/','\\')+'\\')
     n = (project+texPath)
     n = str(n.replace('/','\\'))
     p = pathlib.Path(n)
     rex = '*'+fileName+'*'
+    fullPath = []
     for i in list(p.glob(rex)):
         if i.suffix in '.tx':
             continue
         else:
-            fullPath = str(i)
+            fullPath.append(str(i))
+    if fullPath == []:  # 設定されたパスに画像がなければ
+        missfile = pm.confirmDialog(t='Error',m=errorlanguage(nodeName,lan,n)[1],b=[(errorlanguage(nodeName,lan,'')[3]),(errorlanguage(nodeName,lan,'')[4])])
+        if missfile == (errorlanguage(nodeName,lan,'')[2]):
+            subprocess.run("clip", input=fullPath, text=True)  # WindowsのClipを使用してクリップボードにコピー
+        return (False)
+    for i in fullPath:
+        ch = checkPath(nodeName,i,lan,s)
+        if ch==True:
+            fullPath=i
             break
-    try:
-        fullPath
-    except NameError:
-        fullPath = n
+    if ch==False:
+        pm.confirmDialog(t='Error',m=errorlanguage(nodeName,lan,'')[2],b=errorlanguage(nodeName,lan,'')[4])
+        return(False)
     imgPath = str(re.sub('.*sourceimages','sourceimages',fullPath))
+    print(imgPath)
     return(fullPath,imgPath)
 
 # 本体
@@ -121,8 +124,8 @@ def texplace(nodeName,fileName,texPath,lan,rs):
         if s == []:
             pm.confirmDialog(t='Error',m=(errorlanguage(nodeName[i],lan,'')[0]),b=(errorlanguage(nodeName[i],lan,'')[4]))
             break
-        path = projpath(fileName[i],texPath,s,f)
-        if checkPath(nodeName[i],path[0],lan,s)==False:
+        path = projpath(nodeName[i],fileName[i],texPath,s,f,lan)
+        if path==False:
             break
         nodes = nodecrate(s,i,nodeName)
         Sorttex(f,nodes[0],nodes[1],nodes[2],path[1],rs,nodes[3])
@@ -190,15 +193,15 @@ def materialNodeNames(v):
     if v==1:
         #ss&aiss
         names1 = ['baseColor','metalness','specularRoughness','normalCamera','displacementShader','emission','opacity']
-        names2 = ['Base','Metal','Roughness','Normal','Height','Emission','Opacity']
+        names2 = ['Base','Metal','Roughness','Normal','Height','Emissive','Opacity']
     elif v==2:
         #rsm
         names1 = ['diffuse_color','metalness','refl_roughness','bump_input','displacementShader','emission_color','opacity_color']
-        names2 = ['Color','Metal','Roughness','Normal','Displace','Emission','Opacity']
+        names2 = ['Color','Metal','Roughness','Normal','Displace','Emissive','Opacity']
     elif v==3:
         #rssm
         names1 = ['base_color','metalness','refl_roughness','bump_input','displacementShader','emission_color','opacity_color']
-        names2 = ['Color','Metal','Roughness','Normal','Displace','Emission','Opacity']
+        names2 = ['Color','Metal','Roughness','Normal','Displace','Emissive','Opacity']
     return([names1,names2])
 
 # ノード接続用の名前変更
@@ -245,7 +248,7 @@ def languageset(ws):
         ln = jp
     if ws['mat'].getSelect() == 1:
         return(ln)
-    rs = ['Color','Metalness','Roughness','Normal','DisplaceHeightField','Emission','Opacity']
+    rs = ['Color','Metalness','Roughness','Normal','DisplaceHeightField','Emissive','Opacity']
     for i in range(7):
         ln[i]= rs[i]
     return(ln)
