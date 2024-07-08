@@ -2,6 +2,7 @@ import pymel.core as pm
 import re
 import subprocess
 import pathlib
+import itertools
 
 # 接続
 def baseColor(f,files,input,imgPath):  # ベースカラー
@@ -70,13 +71,26 @@ def nodecrate(s,i,nodeName):
     return(files,input,inputSG,p2t)
 
 # パスの確認
-def checkPath(nodeName,fullPath,lan):
+def checkPath(nodeName,fullPath,lan,s):
     path = pathlib.Path(fullPath)
     if path.is_file()==False :  # 設定されたパスに画像があるかチェック
-        missfile = pm.confirmDialog(t='Error',m=errorlanguage(nodeName,lan,fullPath)[1],b=[(errorlanguage(nodeName,lan,'')[2]),(errorlanguage(nodeName,lan,'')[3])])
+        missfile = pm.confirmDialog(t='Error',m=errorlanguage(nodeName,lan,fullPath)[1],b=[(errorlanguage(nodeName,lan,'')[3]),(errorlanguage(nodeName,lan,'')[4])])
         if missfile == (errorlanguage(nodeName,lan,'')[2]):
             subprocess.run("clip", input=fullPath, text=True)  # WindowsのClipを使用してクリップボードにコピー
         return (False)
+    t = path.stem
+    t = t.split('_')
+    found = False
+    for i in range(len(t)):
+        l=list(itertools.combinations(t, i))
+        for j in l:
+            if s[0] == str('_'.join(j)):
+                found = True
+                break
+    if found == False:
+        pm.confirmDialog(t='Error',m=errorlanguage(nodeName,lan,fullPath)[2],b=errorlanguage(nodeName,lan,'')[4])
+        return(False)
+    
     return (True)
 
 # テクスチャフォルダパスの調整
@@ -86,7 +100,7 @@ def projpath(fileName,texPath,s,f):
     n = (project+texPath)
     n = str(n.replace('/','\\'))
     p = pathlib.Path(n)
-    rex = '*'+s[0]+'_'+fileName+'*'
+    rex = '*'+fileName+'*'
     for i in list(p.glob(rex)):
         if i.suffix in '.tx':
             continue
@@ -97,7 +111,6 @@ def projpath(fileName,texPath,s,f):
         fullPath
     except NameError:
         fullPath = n
-        errors = 1
     imgPath = str(re.sub('.*sourceimages','sourceimages',fullPath))
     return(fullPath,imgPath)
 
@@ -106,10 +119,10 @@ def texplace(nodeName,fileName,texPath,lan,rs):
     s = pm.ls(sl=True)
     for i,f in enumerate(fileName):
         if s == []:
-            pm.confirmDialog(t='Error',m=(errorlanguage(nodeName[i],lan,'')[0]),b=(errorlanguage(nodeName[i],lan,'')[3]))
+            pm.confirmDialog(t='Error',m=(errorlanguage(nodeName[i],lan,'')[0]),b=(errorlanguage(nodeName[i],lan,'')[4]))
             break
         path = projpath(fileName[i],texPath,s,f)
-        if checkPath(nodeName[i],path[0],lan)==False:
+        if checkPath(nodeName[i],path[0],lan,s)==False:
             break
         nodes = nodecrate(s,i,nodeName)
         Sorttex(f,nodes[0],nodes[1],nodes[2],path[1],rs,nodes[3])
@@ -136,6 +149,7 @@ def savelang(ws):
 def savemat(ws):
     lan = ws['mat'].getSelect()  # 画像形式の保存
     pm.optionVar['texmaterials'] = lan  # データをuserPrefs.melに保存
+
 # 変数の呼び出し
 def loadvar():
     if (pm.optionVar(ex='checklist')==True):  # 前回の設定読み込みまたは新規で作成
@@ -186,7 +200,6 @@ def materialNodeNames(v):
         names1 = ['base_color','metalness','refl_roughness','bump_input','displacementShader','emission_color','opacity_color']
         names2 = ['Color','Metal','Roughness','Normal','Displace','Emission','Opacity']
     return([names1,names2])
-    
 
 # ノード接続用の名前変更
 def namereplace(ws):
@@ -221,6 +234,8 @@ def changeswitch(ws):
             break
     else:
         ws['button2'].setEnable(0)
+
+# 言語設定
 def languageset(ws):
     en = ['BaseColor','Metalness','Roughness','Normal','Height','Emissive','Opacity','Texture Folder','Connect','Close','Reset','Language']
     jp = ['BaseColor','Metalness','Roughness','Normal','Height','Emissive','Opacity','テクスチャフォルダ','接続','閉じる','リセット','言語']
@@ -235,7 +250,7 @@ def languageset(ws):
         ln[i]= rs[i]
     return(ln)
 
-# 言語設定
+# 言語変更
 def winlanguage(ws):
     ln = languageset(ws)
     for i in range(7):
@@ -248,9 +263,10 @@ def winlanguage(ws):
     savelang(ws)
     savemat(ws)
 
+# エラー時メッセージ
 def errorlanguage(nodeName,lan,fullPath):
-    en = ['Plese select a Material',nodeName+' file not found.\nPlease select material and check file path.\n'+'"'+fullPath+'"','Copy to clipboard','Close']
-    jp = ['マテリアルを選択してください。',nodeName+' ファイルが見つかりません。\n正しいマテリアルを選択しているか、または以下のフォルダに画像があるかを確認してください。\n'+'"'+fullPath+'"','クリップボードにコピー','閉じる']
+    en = ['Plese select a Material',nodeName+' file not found.\nPlease check file path.\n'+'"'+fullPath+'"','The image file and material name do not match.\nPlease make sure you have selected the correct material.','Copy to clipboard','Close']
+    jp = ['マテリアルを選択してください。',nodeName+' ファイルが見つかりません。\n以下のフォルダに画像があるかを確認してください。\n'+'"'+fullPath+'"','画像ファイルとマテリアル名が一致しません。\n正しいマテリアルを選択しているか確認してください。','クリップボードにコピー','閉じる']
     if lan==1:
         return en
     return jp
