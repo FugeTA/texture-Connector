@@ -26,12 +26,13 @@ def normal(f,files,input,imgPath,rs,p2t):
     files.outColor>>normal.input
     pm.setAttr(files.fileTextureName,imgPath)  # Fileノードに画像を設定
 
-def height(f,files,input,inputSG,imgPath,rs):
+def height(f,files,input,inputSG,imgPath,rs,hScale):
     pm.setAttr(files.ignoreColorSpaceFileRules,1)  # カラースペース変更、変更を固定
     pm.setAttr(files.cs,"Raw")
     pm.setAttr(files.alphaIsLuminance,1)  # アルファ値に輝度を使用
     if rs==1:
         disp = pm.shadingNode('displacementShader', asUtility=True)  # Heightマップ用のディスプレイスメントを作成
+        disp.scale.set(hScale)
         files.outAlpha>>disp.displacement
         disp.displacement>>inputSG.displacementShader
     else:
@@ -48,7 +49,7 @@ def othertex(f,files,input,imgPath):
     pm.setAttr(files.fileTextureName,imgPath)  # Fileノードに画像を設定
 
 # 画像の分類
-def Sorttex(f,files,input,inputSG,imgPath,rs,p2t):
+def Sorttex(f,files,input,inputSG,imgPath,rs,p2t,hScale):
     if(f in ['Base','Color','Opacity']):    
         baseColor(f,files,input,imgPath)
         return
@@ -56,7 +57,7 @@ def Sorttex(f,files,input,inputSG,imgPath,rs,p2t):
         normal(f,files,input,imgPath,rs,p2t)
         return
     if(f in ['Height','Displace']):    
-        height(f,files,input,inputSG,imgPath,rs)
+        height(f,files,input,inputSG,imgPath,rs,hScale)
         return
     if(f in ['Emissive','Metal','Roughness']):  
         othertex(f,files,input,imgPath)
@@ -118,7 +119,7 @@ def projpath(nodeName,fileName,texPath,s,f,lan):
     return(fullPath,imgPath)
 
 # 本体
-def texplace(nodeName,fileName,texPath,lan,rs):
+def texplace(nodeName,fileName,texPath,lan,rs,hScale):
     s = pm.ls(sl=True)
     for i,f in enumerate(fileName):
         if s == []:
@@ -128,7 +129,7 @@ def texplace(nodeName,fileName,texPath,lan,rs):
         if path==False:
             break
         nodes = nodecrate(s,i,nodeName)
-        Sorttex(f,nodes[0],nodes[1],nodes[2],path[1],rs,nodes[3])
+        Sorttex(f,nodes[0],nodes[1],nodes[2],path[1],rs,nodes[3],hScale)
 
 # 変数の記憶
 def savecheck(ws):
@@ -152,6 +153,10 @@ def savelang(ws):
 def savemat(ws):
     lan = ws['mat'].getSelect()  # 画像形式の保存
     pm.optionVar['texmaterials'] = lan  # データをuserPrefs.melに保存
+    
+def savescl(ws):
+    scl = ws['hScale'].getValue()  # 画像形式の保存
+    pm.optionVar['texhScale'] = scl  # データをuserPrefs.melに保存
 
 # 変数の呼び出し
 def loadvar():
@@ -171,7 +176,11 @@ def loadvar():
         mat = pm.optionVar['texmaterials']
     else:
         mat = 1
-    return [chlist,texpath,lan,mat]
+    if (pm.optionVar(ex='texhScale')==True):
+        hScale = pm.optionVar['texhScale']
+    else:
+        hScale = 0.5
+    return [chlist,texpath,lan,mat,hScale]
 
 # 入力リセット
 def resetvariable(ws):
@@ -179,6 +188,7 @@ def resetvariable(ws):
     pm.optionVar['texPath'] = 'sourceimages\\texture\\'
     pm.optionVar['texlanguage'] = 1
     pm.optionVar['texmaterials'] = 1
+    pm.optionVar['texhScale'] = 0.5
     for i in range(6):
         chs = 'check'+str(i+1)
         ws[chs].setValue(0)
@@ -187,6 +197,8 @@ def resetvariable(ws):
     pm.optionMenu(ws['mat'],e=True,sl=1)
     winlanguage(ws)
     pm.button(ws['button2'],e=True,en=False)
+    ws['hScale'].setValue(0.5)
+    visibleScale(ws)
 
 #マテリアルごとのノード、ファイル名
 def materialNodeNames(v):
@@ -218,7 +230,8 @@ def namereplace(ws):
     formats = ['','png','exr','tif']
     lan = pm.optionMenu(ws['lang'],q=True,sl=True)
     rs = ws['mat'].getSelect()
-    texplace(nodeName,fileName,texPath,lan,rs)
+    hScale = ws['hScale'].getValue()
+    texplace(nodeName,fileName,texPath,lan,rs,hScale)
 
 # テクスチャフォルダの名前抽出
 def texPath(ws):
@@ -228,8 +241,16 @@ def texPath(ws):
     savetex(ws)
 
 # チェックボックスが押されている時のみ実行ボタンを押せる
+def visibleScale(ws):
+    if(ws['check5'].getValue()):
+            ws['hScale'].setVisible(1)
+    else:
+        ws['hScale'].setVisible(0)
+
+# チェックボックスが押されている時のみ実行ボタンを押せる
 def changeswitch(ws):
     savecheck(ws)
+    visibleScale(ws)
     for i in range(7):
         checks = 'check'+str(i+1)
         if(ws[checks].getValue()):
@@ -309,7 +330,9 @@ def openWindow():
                 ws['check5'] = pm.checkBox(v=ch5,cc=pm.Callback(changeswitch,ws))
                 ws['check6'] = pm.checkBox(v=ch6,cc=pm.Callback(changeswitch,ws))
                 ws['check7'] = pm.checkBox(v=ch7,cc=pm.Callback(changeswitch,ws))
-                
+            with pm.horizontalLayout():
+                ws['hScale'] = pm.floatSliderGrp(l='Height Scale',f=True,max=1.0,min=0.0,v=0.1,s=0.001,cc=pm.Callback(savescl,ws))
+            
             with pm.horizontalLayout():
                 ws['path'] = pm.textField(text=texpath,cc=pm.Callback(savetex,ws))  # テクスチャフォルダの指定（画像を格納しているフォルダ）
                 ws['button1'] = pm.button(c=pm.Callback(texPath,ws))
@@ -320,6 +343,7 @@ def openWindow():
             pm.optionMenu(ws['lang'],e=True,sl=load[2])
             pm.optionMenu(ws['mat'],e=True,sl=load[3])
             winlanguage(ws)
+            ws['hScale'].setValue(load[4])
             changeswitch(ws)  # 実行可能かの確認
             
 if __name__ == '__main__':
