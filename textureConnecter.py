@@ -32,13 +32,13 @@ def height(f,files,input,inputSG,imgPath,rs,hScale):
     pm.setAttr(files.alphaIsLuminance,1)  # アルファ値に輝度を使用
     if rs==1:
         disp = pm.shadingNode('displacementShader', asUtility=True)  # Heightマップ用のディスプレイスメントを作成
-        disp.scale.set(hScale)
         files.outAlpha>>disp.displacement
         disp.displacement>>inputSG.displacementShader
     else:
         disp = pm.shadingNode('RedshiftDisplacement', asUtility=True)
         files.outColor>>disp.texMap
         disp.out>>inputSG.displacementShader
+    disp.scale.set(hScale)
     pm.setAttr(files.fileTextureName,imgPath)  # Fileノードに画像を設定
 
 def othertex(f,files,input,imgPath):
