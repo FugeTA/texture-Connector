@@ -189,7 +189,7 @@ def resetvariable(ws):
     pm.optionVar['texlanguage'] = 1
     pm.optionVar['texmaterials'] = 1
     pm.optionVar['texhScale'] = 0.5
-    for i in range(6):
+    for i in range(7):
         chs = 'check'+str(i+1)
         ws[chs].setValue(0)
     ws['path'].setText('sourceimages\\texture\\')
