@@ -76,16 +76,12 @@ def checkPath(nodeName,fullPath,lan,s):
     path = pathlib.Path(fullPath)
     t = path.stem
     t = t.split('_')
-    found = False
     for i in range(len(t)):  # 画像名とがあるかチェック
         l=list(itertools.combinations(t, i))
         for j in l:
             if s[0] == str('_'.join(j)):
-                found = True
-                break
-    if found == False:
-        return(False)
-    return (True)
+                return(True)
+    return(False)
 
 # テクスチャフォルダパスの調整
 def projpath(nodeName,fileName,texPath,s,f,lan):
@@ -111,11 +107,10 @@ def projpath(nodeName,fileName,texPath,s,f,lan):
         if ch==True:
             fullPath=i
             break
-    if ch==False:
+    else:
         pm.confirmDialog(t='Error',m=errorlanguage(nodeName,lan,'')[2],b=errorlanguage(nodeName,lan,'')[4])
         return(False)
     imgPath = str(re.sub('.*sourceimages','sourceimages',fullPath))
-    print(imgPath)
     return(fullPath,imgPath)
 
 # 本体
@@ -235,8 +230,13 @@ def namereplace(ws):
 
 # テクスチャフォルダの名前抽出
 def texPath(ws):
-    path = pm.fileDialog2(fm=3,okc='Select',dir=(pm.workspace(q=True,rootDirectory=True)+'\\sourceimages\\texture'))
-    path2= re.sub('.*sourceimages','sourceimages',path[0])
+    basepath = pathlib.Path(pm.workspace(q=True,rootDirectory=True)+'\\sourceimages\\texture')
+    if basepath.exists()==False:
+        basepath = pathlib.Path(pm.workspace(q=True,rootDirectory=True)+'\\sourceimages')
+    chpath = pm.fileDialog2(fm=3,okc='Select',dir=basepath)
+    if(chpath==None):
+        return
+    path2= re.sub('.*sourceimages','sourceimages',chpath[0])
     ws['path'].setText(str(path2))
     savetex(ws)
 
