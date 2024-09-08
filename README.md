@@ -3,7 +3,7 @@
 ![screenshot](images/texconnect_window.PNG)  
 [English](README_EN.md)
 ## 概要
-AdobeSubstancePainterで出力したテクスチャをMayaに簡単にアサインするツールです。
+AdobeSubstancePainterで出力したテクスチャをMayaに簡単にアサインするツールです。  
 pymelが不要なバージョンです。
 ## 要件
 なし
@@ -13,7 +13,8 @@ pymelが不要なバージョンです。
 ```
 import textureConnecter
 textureConnecter.openWindow()
-```
+```  
+またはscriptEditor上で直に実行する。
 ## 説明
 1.Substance PainterでArnoldテンプレートを使用し、テクスチャを出力する。  
 2.maya内でHypershade上でマテリアルを選択する。（マテリアル名を変更しないこと）  
