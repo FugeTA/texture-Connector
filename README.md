@@ -1,11 +1,12 @@
-# texture-Connector
+# texture-Connector on maya.cmd(WIP)
 
 ![screenshot](images/texconnect_window.PNG)  
 [English](README_EN.md)
 ## 概要
 AdobeSubstancePainterで出力したテクスチャをMayaに簡単にアサインするツールです。
+pymelが不要なバージョンです。
 ## 要件
-[pymel](https://github.com/LumaPictures/pymel)
+なし
 ## 使い方
 1.ドキュメントのmaya/使用バージョン/script内に.pyファイルを移動する。  
 2.以下のコマンドを実行する。
