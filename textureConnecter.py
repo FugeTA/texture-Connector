@@ -369,7 +369,7 @@ def openWindow():
     winlanguage(ws)
     cmds.floatSliderGrp(ws['hScale'],e=True,v=load[4])
     changeswitch(ws)  # 実行可能かの確認
-    cmds.showWindow('Texture_Connect')
+    cmds.showWindow()
     
 if __name__ == '__main__':
     openWindow()
