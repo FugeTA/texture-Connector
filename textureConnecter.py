@@ -33,11 +33,13 @@ def height(f,files,input,inputSG,imgPath,rs,hScale):
     if rs==1:
         disp = pm.shadingNode('displacementShader', asUtility=True)  # Heightマップ用のディスプレイスメントを作成
         files.outAlpha>>disp.displacement
-        disp.displacement>>inputSG.displacementShader
+        for i in range(len(inputSG)):
+        	disp.displacement>>inputSG[i].displacementShader
     else:
         disp = pm.shadingNode('RedshiftDisplacement', asUtility=True)
         files.outColor>>disp.texMap
-        disp.out>>inputSG.displacementShader
+    	for i in range(len(inputSG)):
+    		disp.out>>inputSG[i].displacementShader
     disp.scale.set(hScale)
     pm.setAttr(files.fileTextureName,imgPath)  # Fileノードに画像を設定
 
@@ -68,7 +70,7 @@ def nodecrate(s,i,nodeName):
     p2t = pm.shadingNode('place2dTexture', asUtility=True)  # P2Tノード作成
     pm.defaultNavigation(connectToExisting=True, source=p2t, destination=files, f=True)  # 上記のノード接続
     input = s[0]+'.'+nodeName[i]  # マテリアルのアトリビュートノード名
-    inputSG = pm.listConnections(s[0],s=False,t='shadingEngine')[0]  # シェーディングエンジンのアトリビュートノード名（Height用）
+    inputSG = pm.listConnections(s[0],s=False,t='shadingEngine')  # シェーディングエンジンのアトリビュートノード名（Height用）
     return(files,input,inputSG,p2t)
 
 # パスの確認
