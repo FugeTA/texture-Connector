@@ -1,4 +1,4 @@
-# texture-Connector on maya.cmd
+# texture-Connector for maya.cmd
 
 ![screenshot](images/texconnect_window.PNG)  
 [English](README_EN.md)
