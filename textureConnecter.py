@@ -72,7 +72,6 @@ def nodecrate(s,i,nodeName):
     cmds.defaultNavigation(connectToExisting=True, source=p2t, destination=files, f=True)  # 上記のノード接続
     input = s[0]+'.'+nodeName[i]  # マテリアルのアトリビュートノード名
     inputSG = cmds.listConnections(s[0],s=False,t='shadingEngine')  # シェーディングエンジンのアトリビュートノード名（Height用）
-    print(inputSG)
     return(files,input,inputSG,p2t)
 
 # パスの確認
@@ -370,7 +369,8 @@ def openWindow():
     winlanguage(ws)
     cmds.floatSliderGrp(ws['hScale'],e=True,v=load[4])
     changeswitch(ws)  # 実行可能かの確認
+    cmds.showWindow('Texture_Connect')
     
 if __name__ == '__main__':
     openWindow()
-    cmds.showWindow('Texture_Connect')
+
