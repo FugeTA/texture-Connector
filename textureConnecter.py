@@ -130,6 +130,15 @@ class MainWindow(mayaMixin.MayaQWidgetBaseMixin,QtWidgets.QWidget):
         self.button2.clicked.connect(self.pushed_button2)
         layout6.addWidget(self.button2)
         Mainlayout.addLayout(layout6)
+        
+        self.spacerItem1 = QtWidgets.QSpacerItem(0, 0, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
+        Mainlayout.addItem(self.spacerItem1)
+        
+        self.frame = QtWidgets.QFrame()
+        self.frame.setFrameShape(QtWidgets.QFrame.HLine)
+        self.frame.setFrameShadow(QtWidgets.QFrame.Sunken)
+        Mainlayout.addWidget(self.frame)
+        
         #  実行ボタン
         layout7 = QtWidgets.QHBoxLayout()
         self.button3 = QtWidgets.QPushButton(self.tr("Connect"))
@@ -152,7 +161,7 @@ class MainWindow(mayaMixin.MayaQWidgetBaseMixin,QtWidgets.QWidget):
         else:
             qm_file = r"texCon_En.qm"
         
-        self.translator.load(qm_file,directory=pm.workspace(q=True,rootDirectory=True)+'\\scripts\\i18n')
+        self.translator.load(qm_file,directory=cmds.workspace(q=True,rootDirectory=True)+'\\scripts\\i18n')
         QtCore.QCoreApplication.installTranslator(self.translator)
         self.button1.setText(self.tr("reset"))
         self.button3.setText(self.tr("Connect"))
@@ -167,9 +176,8 @@ class MainWindow(mayaMixin.MayaQWidgetBaseMixin,QtWidgets.QWidget):
         if basepath.exists()==False:
             basepath = pathlib.Path(cmds.workspace(q=True,rootDirectory=True)+'\\sourceimages')
         chpath = QtWidgets.QFileDialog.getExistingDirectory()
-        print(chpath)
-        if(chpath==None):
-            return
+        if not chpath:
+            return()
         path2= re.sub('.*sourceimages','sourceimages',chpath)
         self.textbox2.setText(path2)
     
@@ -468,7 +476,7 @@ def openWindow():
         qm_file = r"texCon_En.qm"
     
     translator = QtCore.QTranslator(app)
-    translator.load(qm_file,directory = pm.workspace(q=True,rootDirectory=True)+'\\scripts\\i18n')
+    translator.load(qm_file,directory = cmds.workspace(q=True,rootDirectory=True)+'\\scripts\\i18n')
     QtCore.QCoreApplication.installTranslator(translator)
     
     window = MainWindow(title,translator)
