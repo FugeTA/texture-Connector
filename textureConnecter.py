@@ -7,17 +7,22 @@ import pathlib
 import itertools
 
 #  エラー用ダイアログ
-class ErrorWindow(mayaMixin.MayaQWidgetBaseMixin):
-    def __init__(self,eText):
+class ErrorWindow(mayaMixin.MayaQWidgetBaseMixin,QtWidgets.QWidget):
+    def __init__(self,eText,nodeName,fullPath):
+        super().__init__()
         self.msgBox = QtWidgets.QMessageBox()
+        self.msgBox.setWindowTitle(self.tr("Error"))
         self.msgBox.setIcon(QtWidgets.QMessageBox.Warning)
-        self.msgBox.setWindowTitle(("Error"))
-        self.msgBox.setText(eText)
+        
+        messages = [self.tr('Plese select a Material'),nodeName+self.tr(' file not found.\nPlease check file path.\n')+'"'+fullPath+'"',self.tr('The image file and material name do not match.\nPlease make sure you have selected the correct material.')]
+
+        self.msgBox.setText(messages[eText])
         self.ok = self.msgBox.addButton(QtWidgets.QMessageBox.Ok)
         self.clip = None
+
     def toClipBoard(self,path):
         self.path = path
-        self.clip = self.msgBox.addButton(errorlanguage("","")[3],QtWidgets.QMessageBox.ActionRole)
+        self.clip = self.msgBox.addButton(self.tr('Copy to clipboard'),QtWidgets.QMessageBox.ActionRole)
         
     def openWindow(self):
         self.msgBox.exec()
@@ -27,9 +32,10 @@ class ErrorWindow(mayaMixin.MayaQWidgetBaseMixin):
 
 #  ウィンドウの見た目と各機能
 class MainWindow(mayaMixin.MayaQWidgetBaseMixin,QtWidgets.QWidget):
-    def __init__(self,title):
+    def __init__(self,title,translator):
         super().__init__()
         
+        self.translator = translator
         self.save=True
 
         load = loadvar()  # 前回の変数呼び出し
@@ -48,9 +54,10 @@ class MainWindow(mayaMixin.MayaQWidgetBaseMixin,QtWidgets.QWidget):
         self.combobox1 = QtWidgets.QComboBox(self)
         self.combobox1.addItems(["日本語", "English"])
         self.combobox1.setCurrentIndex(load[2])
+        self.combobox1.currentIndexChanged.connect(self.langSwitch)
         layout2.addWidget(self.combobox1)
         #  リセットボタン
-        self.button1 = QtWidgets.QPushButton("リセット")
+        self.button1 = QtWidgets.QPushButton(self.tr("reset"))
         self.button1.clicked.connect(self.pushed_button1)
         layout2.addWidget(self.button1)
         Mainlayout.addLayout(layout2)
@@ -125,10 +132,10 @@ class MainWindow(mayaMixin.MayaQWidgetBaseMixin,QtWidgets.QWidget):
         Mainlayout.addLayout(layout6)
         #  実行ボタン
         layout7 = QtWidgets.QHBoxLayout()
-        self.button3 = QtWidgets.QPushButton("実行")
+        self.button3 = QtWidgets.QPushButton(self.tr("Connect"))
         self.button3.clicked.connect(self.pushed_button3)
         layout7.addWidget(self.button3)
-        self.button4 = QtWidgets.QPushButton("閉じる")
+        self.button4 = QtWidgets.QPushButton(self.tr("Close"))
         self.button4.clicked.connect(self.pushed_button4)
         layout7.addWidget(self.button4)
         Mainlayout.addLayout(layout7)
@@ -138,6 +145,18 @@ class MainWindow(mayaMixin.MayaQWidgetBaseMixin,QtWidgets.QWidget):
         self.disableButton()
         if ch5 == 1:
             self.scaleVisible(True)
+    
+    def langSwitch(self):
+        if self.combobox1.currentIndex() == 0:
+            qm_file = r"texCon_Jp.qm"
+        else:
+            qm_file = r"texCon_En.qm"
+        
+        self.translator.load(qm_file,directory=pm.workspace(q=True,rootDirectory=True)+'\\scripts\\i18n')
+        QtCore.QCoreApplication.installTranslator(self.translator)
+        self.button1.setText(self.tr("reset"))
+        self.button3.setText(self.tr("Connect"))
+        self.button4.setText(self.tr("Close"))
         
     #  リセット
     def pushed_button1(self):
@@ -284,7 +303,7 @@ def projpath(nodeName,fileName,texPath,s,f):
         else:
             fullPath.append(str(i))
     if fullPath == []:  # 設定されたパスに画像がなければ
-        errorDialog = ErrorWindow(errorlanguage(nodeName,n)[1])
+        errorDialog = ErrorWindow(1,nodeName,n)
         errorDialog.toClipBoard(n)
         errorDialog.openWindow()
         return (False)
@@ -294,7 +313,7 @@ def projpath(nodeName,fileName,texPath,s,f):
             fullPath=i
             break
     else:
-        errorDialog = ErrorWindow(errorlanguage(nodeName,'')[2])
+        errorDialog = ErrorWindow(2,'','')
         errorDialog.openWindow()
         return(False)
     imgPath = str(re.sub('.*sourceimages','sourceimages',fullPath))
@@ -305,7 +324,7 @@ def texplace(nodeName,fileName,texPath,rs,hScale):
     s = cmds.ls(sl=True)
     for i,f in enumerate(fileName):
         if s == []:
-            errorDialog = ErrorWindow(errorlanguage(nodeName[i],"")[0])
+            errorDialog = ErrorWindow(0,'','')
             errorDialog.openWindow()
             
             break
@@ -426,7 +445,7 @@ def resetvariable(self):
     self.checkbox6.setChecked(False)
     self.checkbox7.setChecked(False)
     self.textbox2.setText('sourceimages\\texture\\')
-    self.combobox1.setCurrentIndex(0)
+
     self.combobox2.setCurrentIndex(0)
     self.doubleSpinBox.setValue(0.5)
 
@@ -439,11 +458,22 @@ def closeOldWindow(title):
 
 #  アプリの実行と終了
 def openWindow():
-
+    
     title = "Texture_Connect"
     closeOldWindow(title)
-    window = MainWindow(title)
+    app = QtWidgets.QApplication.instance()
+    if cmds.optionVar(q='texlanguage') == 0:
+        qm_file = r"texCon_Jp.qm"
+    else:
+        qm_file = r"texCon_En.qm"
+    
+    translator = QtCore.QTranslator(app)
+    translator.load(qm_file,directory = pm.workspace(q=True,rootDirectory=True)+'\\scripts\\i18n')
+    QtCore.QCoreApplication.installTranslator(translator)
+    
+    window = MainWindow(title,translator)
     window.show()
+    app.exec_()
     
 if __name__ == "__main__":
     openWindow()
