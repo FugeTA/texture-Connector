@@ -2,7 +2,6 @@ import maya.cmds as cmds
 from PySide2 import QtWidgets,QtGui,QtCore
 from maya.app.general import mayaMixin
 import re
-import subprocess
 import pathlib
 import itertools
 
@@ -27,7 +26,8 @@ class ErrorWindow(mayaMixin.MayaQWidgetBaseMixin,QtWidgets.QWidget):
     def openWindow(self):
         self.msgBox.exec()
         if self.msgBox.clickedButton() == self.clip:
-            subprocess.run("clip", input=self.path, text=True)
+            cb = QtWidgets.QApplication.clipboard()
+            cb.setText(self.path)
         closeOldWindow("Error")
 
 #  ウィンドウの見た目と各機能
@@ -40,9 +40,9 @@ class MainWindow(mayaMixin.MayaQWidgetBaseMixin,QtWidgets.QWidget):
 
         load = loadvar()  # 前回の変数呼び出し
         try:
-            ch1,ch2,ch3,ch4,ch5,ch6,ch7 = load[0]
+            ch1,ch2,ch3,ch4,ch5,ch6,ch7,ch8 = load[0]
         except TypeError:
-            ch1,ch2,ch3,ch4,ch5,ch6,ch7 = [0,0,0,0,0,0,0]
+            ch1,ch2,ch3,ch4,ch5,ch6,ch7,ch8 = [0,0,0,0,0,0,0,0]
             
         texpath = load[1]
 
@@ -62,10 +62,15 @@ class MainWindow(mayaMixin.MayaQWidgetBaseMixin,QtWidgets.QWidget):
         layout2.addWidget(self.button1)
         Mainlayout.addLayout(layout2)
        #  マテリアル選択
+        layout8 = QtWidgets.QHBoxLayout()
         self.combobox2 = QtWidgets.QComboBox(self)
         self.combobox2.addItems(["StandardSurface & aiStandardSurface", "RedShiftMaterial", "RedShiftStandardMaterial"])
         self.combobox2.setCurrentIndex(load[3])
-        Mainlayout.addWidget(self.combobox2)
+        layout8.addWidget(self.combobox2)
+        self.checkbox8 = QtWidgets.QCheckBox("UDIM")
+        self.checkbox8.setChecked(ch8)
+        layout8.addWidget(self.checkbox8)
+        Mainlayout.addLayout(layout8)
         #  テクスチャ選択
         layout3 = QtWidgets.QHBoxLayout()
         self.checkbox1 = QtWidgets.QCheckBox("BaseColor")
@@ -216,11 +221,15 @@ class MainWindow(mayaMixin.MayaQWidgetBaseMixin,QtWidgets.QWidget):
         savevar(self)
 
 # 接続
-def baseColor(f,files,input,imgPath):  # ベースカラー
+def baseColor(f,files,input,imgPath,udim):  # ベースカラー
+    if udim:
+        cmds.setAttr((files+'.uvTilingMode'),3)
     cmds.connectAttr((files+'.outColor'),input,f=True)
     cmds.setAttr((files+'.fileTextureName'),imgPath,type='string')  # Fileノードに画像を設定
 
-def normal(f,files,input,imgPath,rs,p2t):
+def normal(f,files,input,imgPath,rs,p2t,udim):
+    if udim:
+        cmds.setAttr((files+'.uvTilingMode'),3)
     if rs==0:
         normal = cmds.shadingNode('aiNormalMap', asUtility=True)  # aiノーマルマップ作成
         cmds.connectAttr(normal+'.outValue',input,f=True)
@@ -237,7 +246,9 @@ def normal(f,files,input,imgPath,rs,p2t):
     cmds.connectAttr(files+'.outColor',normal+'.input',f=True)
     cmds.setAttr(files+'.fileTextureName',imgPath,type='string')  # Fileノードに画像を設定
 
-def height(f,files,input,inputSG,imgPath,rs,hScale):
+def height(f,files,input,inputSG,imgPath,rs,hScale,udim):
+    if udim:
+        cmds.setAttr((files+'.uvTilingMode'),3)
     cmds.setAttr(files+'.ignoreColorSpaceFileRules',1)  # カラースペース変更、変更を固定
     cmds.setAttr(files+'.cs',"Raw",type='string')
     cmds.setAttr(files+'.alphaIsLuminance',1)  # アルファ値に輝度を使用
@@ -254,7 +265,9 @@ def height(f,files,input,inputSG,imgPath,rs,hScale):
     cmds.setAttr(disp+'.scale',hScale)
     cmds.setAttr(files+'.fileTextureName',imgPath,type='string')  # Fileノードに画像を設定
 
-def othertex(f,files,input,imgPath):
+def othertex(f,files,input,imgPath,udim):
+    if udim:
+        cmds.setAttr((files+'.uvTilingMode'),3)
     cmds.setAttr(files+'.ignoreColorSpaceFileRules',1)  # カラースペース変更、変更を固定
     cmds.setAttr(files+'.cs',"Raw",type='string')
     cmds.setAttr(files+'.alphaIsLuminance',1)  # アルファ値に輝度を使用
@@ -262,18 +275,18 @@ def othertex(f,files,input,imgPath):
     cmds.setAttr(files+'.fileTextureName',imgPath,type='string')  # Fileノードに画像を設定
 
 # 画像の分類
-def Sorttex(f,files,input,inputSG,imgPath,rs,p2t,hScale):
+def Sorttex(f,files,input,inputSG,imgPath,rs,p2t,hScale,udim):
     if(f in ['Base','Color','Opacity']):    
-        baseColor(f,files,input,imgPath)
+        baseColor(f,files,input,imgPath,udim)
         return
     if(f == 'Normal'):    
-        normal(f,files,input,imgPath,rs,p2t)
+        normal(f,files,input,imgPath,rs,p2t,udim)
         return
     if(f in ['Height','Displace']):    
-        height(f,files,input,inputSG,imgPath,rs,hScale)
+        height(f,files,input,inputSG,imgPath,rs,hScale,udim)
         return
     if(f in ['Emissive','Metal','Roughness']):  
-        othertex(f,files,input,imgPath)
+        othertex(f,files,input,imgPath,udim)
 
 # ノード作成
 def nodecrate(s,i,nodeName):
@@ -289,15 +302,15 @@ def checkPath(nodeName,fullPath,s):
     path = pathlib.Path(fullPath)
     t = path.stem
     t = t.split('_')
-    for i in range(len(t)):  # 画像名のファイルがあるかチェック
-        l=list(itertools.combinations(t, i))
+    for i in range(len(t)):  # マテリアル名のファイルがあるかチェック
+        l=itertools.combinations(t, i)
         for j in l:
             if s[0] == str('_'.join(j)):
                 return(True)
     return(False)
 
 # テクスチャフォルダパスの調整
-def projpath(nodeName,fileName,texPath,s,f):
+def projpath(nodeName,fileName,texPath,s,f,udim):
     project = cmds.workspace(q=True,fn=True)  # パスの調整
     project = str(project.replace('/','\\')+'\\')
     n = (project+texPath)
@@ -305,7 +318,8 @@ def projpath(nodeName,fileName,texPath,s,f):
     p = pathlib.Path(n)
     rex = '*'+fileName+'*'
     fullPath = []
-    for i in list(p.glob(rex)):
+    for i in p.glob(rex):
+        print(i)
         if i.suffix in '.tx':
             continue
         else:
@@ -315,6 +329,7 @@ def projpath(nodeName,fileName,texPath,s,f):
         errorDialog.toClipBoard(n)
         errorDialog.openWindow()
         return (False)
+
     for i in fullPath:
         ch = checkPath(nodeName,i,s)
         if ch==True:
@@ -324,11 +339,13 @@ def projpath(nodeName,fileName,texPath,s,f):
         errorDialog = ErrorWindow(2,'','')
         errorDialog.openWindow()
         return(False)
+    if udim:
+        fullPath = re.sub(r'_\d+\.','.<UDIM>.',fullPath)
     imgPath = str(re.sub('.*sourceimages','sourceimages',fullPath))
     return(fullPath,imgPath)
 
 # 本体
-def texplace(nodeName,fileName,texPath,rs,hScale):
+def texplace(nodeName,fileName,texPath,rs,hScale,udim):
     s = cmds.ls(sl=True)
     for i,f in enumerate(fileName):
         if s == []:
@@ -336,11 +353,11 @@ def texplace(nodeName,fileName,texPath,rs,hScale):
             errorDialog.openWindow()
             
             break
-        path = projpath(nodeName[i],fileName[i],texPath,s,f)
+        path = projpath(nodeName[i],fileName[i],texPath,s,f,udim)
         if path==False:
             break
         nodes = nodecrate(s,i,nodeName)
-        Sorttex(f,nodes[0],nodes[1],nodes[2],path[1],rs,nodes[3],hScale)
+        Sorttex(f,nodes[0],nodes[1],nodes[2],path[1],rs,nodes[3],hScale,udim)
 
 #マテリアルごとのノード、ファイル名
 def materialNodeNames(v):
@@ -379,17 +396,13 @@ def namereplace(self):
     texPath = self.textbox2.text()
     rs = self.combobox2.currentIndex()
     hScale = self.doubleSpinBox.value()
-    texplace(nodeName,fileName,texPath,rs,hScale)
+    udim = self.checkbox8.isChecked()
+    texplace(nodeName,fileName,texPath,rs,hScale,udim)
 
-# エラー時メッセージ
-def errorlanguage(nodeName,fullPath):
-    en = ['Plese select a Material',nodeName+' file not found.\nPlease check file path.\n'+'"'+fullPath+'"','The image file and material name do not match.\nPlease make sure you have selected the correct material.','Copy to clipboard','Close']
-    jp = ['マテリアルを選択してください。',nodeName+' ファイルが見つかりません。\n以下のフォルダに画像があるかを確認してください。\n'+'"'+fullPath+'"','画像ファイルとマテリアル名が一致しません。\n正しいマテリアルを選択しているか確認してください。','クリップボードにコピー','閉じる']
-    return jp
 
 # 変数の記憶
 def savevar(self):
-    chlist = [0,0,0,0,0,0,0]
+    chlist = [0,0,0,0,0,0,0,0]
     cmds.optionVar(ia='checklist')
     chlist[0] = int(self.checkbox1.isChecked())
     chlist[1] = int(self.checkbox2.isChecked())
@@ -398,7 +411,8 @@ def savevar(self):
     chlist[4] = int(self.checkbox5.isChecked())
     chlist[5] = int(self.checkbox6.isChecked())
     chlist[6] = int(self.checkbox7.isChecked())
-    for i in range(7):
+    chlist[7] = int(self.checkbox8.isChecked())
+    for i in range(8):
         cmds.optionVar(iva=['checklist',chlist[i]])  # データをuserPrefs.melに保存
 
     if self.textbox2.text() != 'sourceimages/texture/':  # テクスチャフォルダパスの保存
@@ -418,7 +432,7 @@ def loadvar():
     if (cmds.optionVar(ex='checklist')==True):  # 前回の設定読み込みまたは新規で作成
         chlist = cmds.optionVar(q='checklist')
     else:
-        chlist = [0,0,0,0,0,0,0]
+        chlist = [0,0,0,0,0,0,0,0]
     if (cmds.optionVar(ex='texPath')==True):
         texpath = cmds.optionVar(q='texPath')
     else:
@@ -452,6 +466,7 @@ def resetvariable(self):
     self.checkbox5.setChecked(False)
     self.checkbox6.setChecked(False)
     self.checkbox7.setChecked(False)
+    self.checkbox8.setChecked(False)
     self.textbox2.setText('sourceimages\\texture\\')
 
     self.combobox2.setCurrentIndex(0)
