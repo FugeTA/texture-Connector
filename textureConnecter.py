@@ -9,59 +9,60 @@ import itertools
 class ErrorWindow(mayaMixin.MayaQWidgetBaseMixin,QtWidgets.QWidget):
     def __init__(self,eText,nodeName,fullPath):
         super().__init__()
-        self.msgBox = QtWidgets.QMessageBox()
-        self.msgBox.setWindowTitle(self.tr("Error"))
-        self.msgBox.setIcon(QtWidgets.QMessageBox.Warning)
-        
+        self.msgBox = QtWidgets.QMessageBox()  # メッセージボックス作成
+        self.msgBox.setWindowTitle(self.tr("Error"))  # ウィンドウの名前
+        self.msgBox.setObjectName("Error_window")  # ウィジェットとしての名前
+        self.msgBox.setIcon(QtWidgets.QMessageBox.Warning)  # アイコン
+        # 各メッセージ
         messages = [self.tr('Plese select a Material'),nodeName+self.tr(' file not found.\nPlease check file path.\n')+'"'+fullPath+'"',self.tr('The image file and material name do not match.\nPlease make sure you have selected the correct material.')]
-
-        self.msgBox.setText(messages[eText])
-        self.ok = self.msgBox.addButton(QtWidgets.QMessageBox.Ok)
-        self.clip = None
-
+        self.msgBox.setText(messages[eText])  # メッセージ呼び出し
+        self.ok = self.msgBox.addButton(QtWidgets.QMessageBox.Ok)  # ボタン作成
+        self.clip = None # クリップボタンがない時用
+    # クリップボードにコピー
     def toClipBoard(self,path):
         self.path = path
         self.clip = self.msgBox.addButton(self.tr('Copy to clipboard'),QtWidgets.QMessageBox.ActionRole)
-        
+    # 実行
     def openWindow(self):
         self.msgBox.exec()
+        # クリップボードにコピーを選択したなら
         if self.msgBox.clickedButton() == self.clip:
             cb = QtWidgets.QApplication.clipboard()
             cb.setText(self.path)
-        closeOldWindow("Error")
+        self.deleteLater() # オブジェクト削除
 
 #  ウィンドウの見た目と各機能
 class MainWindow(mayaMixin.MayaQWidgetBaseMixin,QtWidgets.QWidget):
     def __init__(self,title,translator):
         super().__init__()
         
-        self.translator = translator
-        self.save=True
-
+        self.setWindowTitle(title)  # タイトル
+        self.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # deleteLater()の自動実行
+        self.setObjectName(objName(title))  # ウィジェットとしての名前
+        self.translator = translator  # 言語変更機能のため継承
+        
         load = loadvar()  # 前回の変数呼び出し
-        try:
+        try:  # チャンネルボックスの情報があれば
             ch1,ch2,ch3,ch4,ch5,ch6,ch7,ch8 = load[0]
-        except TypeError:
+        except TypeError:  # 無ければ
             ch1,ch2,ch3,ch4,ch5,ch6,ch7,ch8 = [0,0,0,0,0,0,0,0]
-            
-        texpath = load[1]
+        texpath = load[1]  # テクスチャパス読み込み
 
-        self.setWindowTitle(title)
-        Mainlayout = QtWidgets.QVBoxLayout()
+        Mainlayout = QtWidgets.QVBoxLayout()  # メインのレイアウト
 
-        #  言語選択
+        # 言語選択
         layout2 = QtWidgets.QHBoxLayout()
         self.combobox1 = QtWidgets.QComboBox(self)
         self.combobox1.addItems(["日本語", "English"])
         self.combobox1.setCurrentIndex(load[2])
         self.combobox1.currentIndexChanged.connect(self.langSwitch)
         layout2.addWidget(self.combobox1)
-        #  リセットボタン
+        # リセットボタン
         self.button1 = QtWidgets.QPushButton(self.tr("reset"))
         self.button1.clicked.connect(self.pushed_button1)
         layout2.addWidget(self.button1)
         Mainlayout.addLayout(layout2)
-       #  マテリアル選択
+        # マテリアル選択
         layout8 = QtWidgets.QHBoxLayout()
         self.combobox2 = QtWidgets.QComboBox(self)
         self.combobox2.addItems(["StandardSurface & aiStandardSurface", "RedShiftMaterial", "RedShiftStandardMaterial"])
@@ -71,7 +72,7 @@ class MainWindow(mayaMixin.MayaQWidgetBaseMixin,QtWidgets.QWidget):
         self.checkbox8.setChecked(ch8)
         layout8.addWidget(self.checkbox8)
         Mainlayout.addLayout(layout8)
-        #  テクスチャ選択
+        # テクスチャ選択
         layout3 = QtWidgets.QHBoxLayout()
         self.checkbox1 = QtWidgets.QCheckBox("BaseColor")
         self.checkbox1.setChecked(ch1)
@@ -86,7 +87,7 @@ class MainWindow(mayaMixin.MayaQWidgetBaseMixin,QtWidgets.QWidget):
         self.checkbox3.stateChanged.connect(self.disableButton)
         layout3.addWidget(self.checkbox3)
         Mainlayout.addLayout(layout3)
-
+        # 改行
         layout4 = QtWidgets.QHBoxLayout()
         self.checkbox4 = QtWidgets.QCheckBox("Normal")
         self.checkbox4.setChecked(ch4)
@@ -106,7 +107,7 @@ class MainWindow(mayaMixin.MayaQWidgetBaseMixin,QtWidgets.QWidget):
         self.checkbox7.stateChanged.connect(self.disableButton)
         layout4.addWidget(self.checkbox7)
         Mainlayout.addLayout(layout4)
-        #  Heightスケール
+        # Heightスケール
         layout5 = QtWidgets.QHBoxLayout()
         self.textbox = QtWidgets.QLabel("Scale")
         self.textbox.setVisible(False)
@@ -126,7 +127,7 @@ class MainWindow(mayaMixin.MayaQWidgetBaseMixin,QtWidgets.QWidget):
         self.slider.setVisible(False)
         layout5.addWidget(self.slider)
         Mainlayout.addLayout(layout5)
-        #  テクスチャパス
+        # テクスチャパス
         layout6 = QtWidgets.QHBoxLayout()
         self.textbox2 = QtWidgets.QLineEdit("Texture Path")
         self.textbox2.setText(texpath)
@@ -135,16 +136,14 @@ class MainWindow(mayaMixin.MayaQWidgetBaseMixin,QtWidgets.QWidget):
         self.button2.clicked.connect(self.pushed_button2)
         layout6.addWidget(self.button2)
         Mainlayout.addLayout(layout6)
-        
+        # セパレーター
         self.spacerItem1 = QtWidgets.QSpacerItem(0, 0, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         Mainlayout.addItem(self.spacerItem1)
-        
         self.frame = QtWidgets.QFrame()
         self.frame.setFrameShape(QtWidgets.QFrame.HLine)
         self.frame.setFrameShadow(QtWidgets.QFrame.Sunken)
         Mainlayout.addWidget(self.frame)
-        
-        #  実行ボタン
+        # 実行ボタン
         layout7 = QtWidgets.QHBoxLayout()
         self.button3 = QtWidgets.QPushButton(self.tr("Connect"))
         self.button3.clicked.connect(self.pushed_button3)
@@ -159,23 +158,22 @@ class MainWindow(mayaMixin.MayaQWidgetBaseMixin,QtWidgets.QWidget):
         self.disableButton()
         if ch5 == 1:
             self.scaleVisible(True)
-    
+
+    # 言語変更
     def langSwitch(self):
         if self.combobox1.currentIndex() == 0:
             qm_file = r"texCon_Jp.qm"
         else:
             qm_file = r"texCon_En.qm"
-        
         self.translator.load(qm_file,directory=cmds.workspace(q=True,rootDirectory=True)+'\\scripts\\i18n')
         QtCore.QCoreApplication.installTranslator(self.translator)
         self.button1.setText(self.tr("reset"))
         self.button3.setText(self.tr("Connect"))
         self.button4.setText(self.tr("Close"))
-        
-    #  リセット
+    # リセット
     def pushed_button1(self):
         resetvariable(self)
-    #  ファイル選択
+    # ファイル選択
     def pushed_button2(self):
         basepath = pathlib.Path(cmds.workspace(q=True,rootDirectory=True)+'\\sourceimages\\texture')
         if basepath.exists()==False:
@@ -185,22 +183,21 @@ class MainWindow(mayaMixin.MayaQWidgetBaseMixin,QtWidgets.QWidget):
             return()
         path2= re.sub('.*sourceimages','sourceimages',chpath)
         self.textbox2.setText(path2)
-    
-    #  実行
+    # 実行
     def pushed_button3(self):
         namereplace(self)    
-    #  閉じる
+    # 閉じる
     def pushed_button4(self):
         self.close()
-    #  ボックスからスライダーに
+    # ボックスからスライダーに
     def setSliderV(self):
         value = self.doubleSpinBox.value()*100
         self.slider.setValue(value)
-    #  スライダーからボックスに
+    # スライダーからボックスに
     def setDSBV(self):
         value = self.slider.value()*0.01
         self.doubleSpinBox.setValue(value)
-    #  スケールの表示非表示
+    # スケールの表示非表示
     def scaleVisible(self,bool):
         if bool:
             self.textbox.setVisible(True)
@@ -210,25 +207,25 @@ class MainWindow(mayaMixin.MayaQWidgetBaseMixin,QtWidgets.QWidget):
             self.textbox.setVisible(False)
             self.doubleSpinBox.setVisible(False)
             self.slider.setVisible(False)
-    #  実行ボタンの表示変更
+    # 実行ボタンの表示変更
     def disableButton(self):
         if not self.checkbox1.isChecked() and not self.checkbox2.isChecked() and not self.checkbox3.isChecked() and not self.checkbox4.isChecked() and not self.checkbox5.isChecked() and not self.checkbox6.isChecked() and not self.checkbox7.isChecked():
             self.button3.setEnabled(False)
         else:
             self.button3.setEnabled(True)
-    #  終了時の処理
+    # 終了時の処理
     def closeEvent(self, event):
         savevar(self)
 
 # 接続
 def baseColor(f,files,input,imgPath,udim):  # ベースカラー
-    if udim:
+    if udim:  # UDIMならタイリング変更
         cmds.setAttr((files+'.uvTilingMode'),3)
     cmds.connectAttr((files+'.outColor'),input,f=True)
     cmds.setAttr((files+'.fileTextureName'),imgPath,type='string')  # Fileノードに画像を設定
 
-def normal(f,files,input,imgPath,rs,p2t,udim):
-    if udim:
+def normal(f,files,input,imgPath,rs,p2t,udim):  # ノーマル
+    if udim:  # UDIMならタイリング変更
         cmds.setAttr((files+'.uvTilingMode'),3)
     if rs==0:
         normal = cmds.shadingNode('aiNormalMap', asUtility=True)  # aiノーマルマップ作成
@@ -246,8 +243,8 @@ def normal(f,files,input,imgPath,rs,p2t,udim):
     cmds.connectAttr(files+'.outColor',normal+'.input',f=True)
     cmds.setAttr(files+'.fileTextureName',imgPath,type='string')  # Fileノードに画像を設定
 
-def height(f,files,input,inputSG,imgPath,rs,hScale,udim):
-    if udim:
+def height(f,files,input,inputSG,imgPath,rs,hScale,udim):  # ハイト
+    if udim:  # UDIMならタイリング変更
         cmds.setAttr((files+'.uvTilingMode'),3)
     cmds.setAttr(files+'.ignoreColorSpaceFileRules',1)  # カラースペース変更、変更を固定
     cmds.setAttr(files+'.cs',"Raw",type='string')
@@ -265,8 +262,8 @@ def height(f,files,input,inputSG,imgPath,rs,hScale,udim):
     cmds.setAttr(disp+'.scale',hScale)
     cmds.setAttr(files+'.fileTextureName',imgPath,type='string')  # Fileノードに画像を設定
 
-def othertex(f,files,input,imgPath,udim):
-    if udim:
+def othertex(f,files,input,imgPath,udim):  # その他
+    if udim:  # UDIMならタイリング変更
         cmds.setAttr((files+'.uvTilingMode'),3)
     cmds.setAttr(files+'.ignoreColorSpaceFileRules',1)  # カラースペース変更、変更を固定
     cmds.setAttr(files+'.cs',"Raw",type='string')
@@ -276,16 +273,16 @@ def othertex(f,files,input,imgPath,udim):
 
 # 画像の分類
 def Sorttex(f,files,input,inputSG,imgPath,rs,p2t,hScale,udim):
-    if(f in ['Base','Color','Opacity']):    
+    if(f in ['Base','Color','Opacity']):  # colorで接続
         baseColor(f,files,input,imgPath,udim)
         return
-    if(f == 'Normal'):    
+    if(f == 'Normal'):  #vector3で接続
         normal(f,files,input,imgPath,rs,p2t,udim)
         return
-    if(f in ['Height','Displace']):    
+    if(f in ['Height','Displace']):  # floatでdisplacementに接続
         height(f,files,input,inputSG,imgPath,rs,hScale,udim)
         return
-    if(f in ['Emissive','Metal','Roughness']):  
+    if(f in ['Emissive','Metal','Roughness']):  # floatで接続
         othertex(f,files,input,imgPath,udim)
 
 # ノード作成
@@ -297,15 +294,15 @@ def nodecrate(s,i,nodeName):
     inputSG = cmds.listConnections(s[0],s=False,t='shadingEngine')  # シェーディングエンジンのアトリビュートノード名（Height用）
     return(files,input,inputSG,p2t)
 
-# パスの確認
+# パスの確認(マテリアル内のアンダーバー対策)
 def checkPath(nodeName,fullPath,s):
-    path = pathlib.Path(fullPath)
+    path = pathlib.Path(fullPath)  # ファイルパスを分解
     t = path.stem
-    t = t.split('_')
-    for i in range(len(t)):  # マテリアル名のファイルがあるかチェック
-        l=itertools.combinations(t, i)
+    t = t.split('_')  # アンダーバーで分割
+    for i in range(len(t)):
+        l=itertools.combinations(t, i)  # 分解された文字列を接続
         for j in l:
-            if s[0] == str('_'.join(j)):
+            if s[0] == str('_'.join(j)):  # マテリアル名のファイルがあるかチェック
                 return(True)
     return(False)
 
@@ -313,51 +310,49 @@ def checkPath(nodeName,fullPath,s):
 def projpath(nodeName,fileName,texPath,s,f,udim):
     project = cmds.workspace(q=True,fn=True)  # パスの調整
     project = str(project.replace('/','\\')+'\\')
-    n = (project+texPath)
+    n = (project+texPath)  # プロジェクトフォルダ+テクスチャパス
     n = str(n.replace('/','\\'))
     p = pathlib.Path(n)
     rex = '*'+fileName+'*'
     fullPath = []
-    for i in p.glob(rex):
-        print(i)
-        if i.suffix in '.tx':
+    for i in p.glob(rex):  # 目的のファイルネームがついたファイルを探す
+        if i.suffix in '.tx':  # txファイル（キャッシュ）ならスルー
             continue
         else:
             fullPath.append(str(i))
     if fullPath == []:  # 設定されたパスに画像がなければ
-        errorDialog = ErrorWindow(1,nodeName,n)
+        errorDialog = ErrorWindow(1,nodeName,n)  # エラー
         errorDialog.toClipBoard(n)
         errorDialog.openWindow()
         return (False)
 
-    for i in fullPath:
+    for i in fullPath:  # マテリアルの名前が入っているか
         ch = checkPath(nodeName,i,s)
         if ch==True:
             fullPath=i
             break
-    else:
-        errorDialog = ErrorWindow(2,'','')
+    else:  # 無ければ
+        errorDialog = ErrorWindow(2,'','')  # エラー
         errorDialog.openWindow()
         return(False)
-    if udim:
+    if udim:  # UDIM形式なら
         fullPath = re.sub(r'_\d+\.','.<UDIM>.',fullPath)
-    imgPath = str(re.sub('.*sourceimages','sourceimages',fullPath))
+    imgPath = str(re.sub('.*sourceimages','sourceimages',fullPath))  # 相対パスに省略
     return(fullPath,imgPath)
 
 # 本体
 def texplace(nodeName,fileName,texPath,rs,hScale,udim):
     s = cmds.ls(sl=True)
     for i,f in enumerate(fileName):
-        if s == []:
-            errorDialog = ErrorWindow(0,'','')
+        if s == []:  # 選択されていなければ
+            errorDialog = ErrorWindow(0,'','')  # エラー
             errorDialog.openWindow()
-            
             break
-        path = projpath(nodeName[i],fileName[i],texPath,s,f,udim)
-        if path==False:
+        path = projpath(nodeName[i],fileName[i],texPath,s,f,udim)  # 画像ファイルの選択
+        if path==False:  # 画像ファイルがなければ
             break
-        nodes = nodecrate(s,i,nodeName)
-        Sorttex(f,nodes[0],nodes[1],nodes[2],path[1],rs,nodes[3],hScale,udim)
+        nodes = nodecrate(s,i,nodeName)  # 接続用のノード作成
+        Sorttex(f,nodes[0],nodes[1],nodes[2],path[1],rs,nodes[3],hScale,udim)  # どのアトリビュートと接続するか
 
 #マテリアルごとのノード、ファイル名
 def materialNodeNames(v):
@@ -458,7 +453,6 @@ def resetvariable(self):
     cmds.optionVar(iv=['texlanguage',1])
     cmds.optionVar(iv=['texmaterials',1])
     cmds.optionVar(fv=['texhScale',0.5])
-    
     self.checkbox1.setChecked(False)
     self.checkbox2.setChecked(False)
     self.checkbox3.setChecked(False)
@@ -468,28 +462,27 @@ def resetvariable(self):
     self.checkbox7.setChecked(False)
     self.checkbox8.setChecked(False)
     self.textbox2.setText('sourceimages\\texture\\')
-
     self.combobox2.setCurrentIndex(0)
     self.doubleSpinBox.setValue(0.5)
 
 #  ウィンドウがすでに起動していれば閉じる
 def closeOldWindow(title):
-    for widget in QtWidgets.QApplication.topLevelWidgets():
-        if title == widget.windowTitle():
-           widget.deleteLater()
-           widget.close()
-
+    if cmds.window(title, q=True, ex=True):  # ウィジェットの名前で削除
+        cmds.deleteUI(title)
+           
+def objName(title):
+    return(title + "_window")
+    
 #  アプリの実行と終了
 def openWindow():
-    
     title = "Texture_Connect"
-    closeOldWindow(title)
+    closeOldWindow(objName(title))
+    
     app = QtWidgets.QApplication.instance()
     if cmds.optionVar(q='texlanguage') == 0:
         qm_file = r"texCon_Jp.qm"
     else:
         qm_file = r"texCon_En.qm"
-    
     translator = QtCore.QTranslator(app)
     translator.load(qm_file,directory = cmds.workspace(q=True,rootDirectory=True)+'\\scripts\\i18n')
     QtCore.QCoreApplication.installTranslator(translator)
