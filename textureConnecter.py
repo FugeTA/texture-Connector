@@ -1,5 +1,5 @@
 import maya.cmds as cmds
-from PySide2 import QtWidgets,QtGui,QtCore
+from PySide2 import QtWidgets,QtCore
 from maya.app.general import mayaMixin
 import re
 import pathlib
@@ -7,14 +7,14 @@ import itertools
 
 #  エラー用ダイアログ
 class ErrorWindow(mayaMixin.MayaQWidgetBaseMixin,QtWidgets.QWidget):
-    def __init__(self,eText,nodeName,fullPath):
+    def __init__(self,eText,strings1,strings2):
         super().__init__()
         self.msgBox = QtWidgets.QMessageBox()  # メッセージボックス作成
         self.msgBox.setWindowTitle(self.tr("Error"))  # ウィンドウの名前
         self.msgBox.setObjectName("Error_window")  # ウィジェットとしての名前
         self.msgBox.setIcon(QtWidgets.QMessageBox.Warning)  # アイコン
         # 各メッセージ
-        messages = [self.tr('Plese select a Material'),nodeName+self.tr(' file not found.\nPlease check file path.\n')+'"'+fullPath+'"',self.tr('The image file and material name do not match.\nPlease make sure you have selected the correct material.')]
+        messages = [self.tr('Not selected'),strings1+self.tr(' file not found.\nPlease check file path.\n"')+strings2+'"',self.tr('The image file and material name do not match.\n"'+strings1+'" is not applicable.')]
         self.msgBox.setText(messages[eText])  # メッセージ呼び出し
         self.ok = self.msgBox.addButton(QtWidgets.QMessageBox.Ok)  # ボタン作成
         self.clip = None # クリップボタンがない時用
@@ -35,21 +35,18 @@ class ErrorWindow(mayaMixin.MayaQWidgetBaseMixin,QtWidgets.QWidget):
 class MainWindow(mayaMixin.MayaQWidgetBaseMixin,QtWidgets.QWidget):
     def __init__(self,title,translator):
         super().__init__()
-        
         self.setWindowTitle(title)  # タイトル
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)  # deleteLater()の自動実行
         self.setObjectName(objName(title))  # ウィジェットとしての名前
         self.translator = translator  # 言語変更機能のため継承
-        
         load = loadvar()  # 前回の変数呼び出し
         try:  # チャンネルボックスの情報があれば
             ch1,ch2,ch3,ch4,ch5,ch6,ch7,ch8 = load[0]
         except TypeError:  # 無ければ
             ch1,ch2,ch3,ch4,ch5,ch6,ch7,ch8 = [0,0,0,0,0,0,0,0]
         texpath = load[1]  # テクスチャパス読み込み
-
+        
         Mainlayout = QtWidgets.QVBoxLayout()  # メインのレイアウト
-
         # 言語選択
         layout2 = QtWidgets.QHBoxLayout()
         self.combobox1 = QtWidgets.QComboBox(self)
@@ -214,17 +211,17 @@ class MainWindow(mayaMixin.MayaQWidgetBaseMixin,QtWidgets.QWidget):
         else:
             self.button3.setEnabled(True)
     # 終了時の処理
-    def closeEvent(self, event):
+    def closeEvent(self,_):
         savevar(self)
 
 # 接続
-def baseColor(f,files,input,imgPath,udim):  # ベースカラー
+def baseColor(files,input,imgPath,udim):  # ベースカラー
     if udim:  # UDIMならタイリング変更
         cmds.setAttr((files+'.uvTilingMode'),3)
     cmds.connectAttr((files+'.outColor'),input,f=True)
     cmds.setAttr((files+'.fileTextureName'),imgPath,type='string')  # Fileノードに画像を設定
 
-def normal(f,files,input,imgPath,rs,p2t,udim):  # ノーマル
+def normal(files,input,imgPath,rs,p2t,udim):  # ノーマル
     if udim:  # UDIMならタイリング変更
         cmds.setAttr((files+'.uvTilingMode'),3)
     if rs==0:
@@ -235,7 +232,7 @@ def normal(f,files,input,imgPath,rs,p2t,udim):  # ノーマル
         cmds.delete(p2t)
         normal = cmds.shadingNode('RedshiftNormalMap', asUtility=True)  # rsノーマルマップ作成
         cmds.connectAttr(normal+'.outDisplacementVector',input,f=True)
-        cmd.setAttr(normal+'.tex0.set',imgPath,type='string')
+        cmds.setAttr(normal+'.tex0.set',imgPath,type='string')
         return()
     cmds.setAttr(files+'.ignoreColorSpaceFileRules',1)  # カラースペース変更、変更を固定
     cmds.setAttr(files+'.cs',"Raw",type='string')
@@ -243,7 +240,7 @@ def normal(f,files,input,imgPath,rs,p2t,udim):  # ノーマル
     cmds.connectAttr(files+'.outColor',normal+'.input',f=True)
     cmds.setAttr(files+'.fileTextureName',imgPath,type='string')  # Fileノードに画像を設定
 
-def height(f,files,input,inputSG,imgPath,rs,hScale,udim):  # ハイト
+def height(files,input,inputSG,imgPath,rs,hScale,udim):  # ハイト
     if udim:  # UDIMならタイリング変更
         cmds.setAttr((files+'.uvTilingMode'),3)
     cmds.setAttr(files+'.ignoreColorSpaceFileRules',1)  # カラースペース変更、変更を固定
@@ -252,13 +249,11 @@ def height(f,files,input,inputSG,imgPath,rs,hScale,udim):  # ハイト
     if rs==0:
         disp = cmds.shadingNode('displacementShader', asUtility=True)  # Heightマップ用のディスプレイスメントを作成
         cmds.connectAttr(files+'.outAlpha',disp+'.displacement',f=True)
-        for i in range(len(inputSG)):
-            cmds.connectAttr(disp+'.displacement',inputSG[i]+'.displacementShader',f=True)
+        cmds.connectAttr(disp+'.displacement',inputSG+'.displacementShader',f=True)
     else:
         disp = cmds.shadingNode('RedshiftDisplacement', asUtility=True)
         cmds.connectAttr(files+'.outColor',disp+'.texMap',f=True)
-        for i in range(len(inputSG)):
-            cmds.connectAttr(disp+'.out',inputSG[i]+'.displacementShader',f=True)
+        cmds.connectAttr(disp+'.out',inputSG+'.displacementShader',f=True)
     cmds.setAttr(disp+'.scale',hScale)
     cmds.setAttr(files+'.fileTextureName',imgPath,type='string')  # Fileノードに画像を設定
 
@@ -274,40 +269,38 @@ def othertex(f,files,input,imgPath,udim):  # その他
 # 画像の分類
 def Sorttex(f,files,input,inputSG,imgPath,rs,p2t,hScale,udim):
     if(f in ['Base','Color','Opacity']):  # colorで接続
-        baseColor(f,files,input,imgPath,udim)
+        baseColor(files,input,imgPath,udim)
         return
     if(f == 'Normal'):  #vector3で接続
-        normal(f,files,input,imgPath,rs,p2t,udim)
+        normal(files,input,imgPath,rs,p2t,udim)
         return
     if(f in ['Height','Displace']):  # floatでdisplacementに接続
-        height(f,files,input,inputSG,imgPath,rs,hScale,udim)
+        height(files,input,inputSG,imgPath,rs,hScale,udim)
         return
     if(f in ['Emissive','Metal','Roughness']):  # floatで接続
-        othertex(f,files,input,imgPath,udim)
+        othertex(files,input,imgPath,udim)
 
 # ノード作成
-def nodecrate(s,i,nodeName):
+def nodecrate():
     files = cmds.shadingNode('file', asTexture=True,isColorManaged=True)  # Fileノード作成
     p2t = cmds.shadingNode('place2dTexture', asUtility=True)  # P2Tノード作成
     cmds.defaultNavigation(connectToExisting=True, source=p2t, destination=files, f=True)  # 上記のノード接続
-    input = s[0]+'.'+nodeName[i]  # マテリアルのアトリビュートノード名
-    inputSG = cmds.listConnections(s[0],s=False,t='shadingEngine')  # シェーディングエンジンのアトリビュートノード名（Height用）
-    return(files,input,inputSG,p2t)
+    return(files,p2t)
 
 # パスの確認(マテリアル内のアンダーバー対策)
-def checkPath(nodeName,fullPath,s):
+def checkPath(fullPath,input):
     path = pathlib.Path(fullPath)  # ファイルパスを分解
     t = path.stem
     t = t.split('_')  # アンダーバーで分割
     for i in range(len(t)):
         l=itertools.combinations(t, i)  # 分解された文字列を接続
         for j in l:
-            if s[0] == str('_'.join(j)):  # マテリアル名のファイルがあるかチェック
+            if input == str('_'.join(j)):  # マテリアル名のファイルがあるかチェック
                 return(True)
     return(False)
 
 # テクスチャフォルダパスの調整
-def projpath(nodeName,fileName,texPath,s,f,udim):
+def projpath(nodeName,fileName,texPath,input,udim):
     project = cmds.workspace(q=True,fn=True)  # パスの調整
     project = str(project.replace('/','\\')+'\\')
     n = (project+texPath)  # プロジェクトフォルダ+テクスチャパス
@@ -325,14 +318,13 @@ def projpath(nodeName,fileName,texPath,s,f,udim):
         errorDialog.toClipBoard(n)
         errorDialog.openWindow()
         return (False)
-
     for i in fullPath:  # マテリアルの名前が入っているか
-        ch = checkPath(nodeName,i,s)
+        ch = checkPath(i,input)
         if ch==True:
             fullPath=i
             break
     else:  # 無ければ
-        errorDialog = ErrorWindow(2,'','')  # エラー
+        errorDialog = ErrorWindow(2,input,'')  # エラー
         errorDialog.openWindow()
         return(False)
     if udim:  # UDIM形式なら
@@ -340,19 +332,59 @@ def projpath(nodeName,fileName,texPath,s,f,udim):
     imgPath = str(re.sub('.*sourceimages','sourceimages',fullPath))  # 相対パスに省略
     return(fullPath,imgPath)
 
+# shapeノードからSGノードを取得
+def parent(sel,names):
+    chl = cmds.listRelatives(sel, c=True)
+    if not chl:
+        return()
+    for i in chl:
+        if not cmds.objectType(i,isType='mesh'):  # シェイプノードでなければ
+            parent(chl,names)
+        else:
+            if not (name := cmds.listConnections(i+'.instObjGroups',s=False)):
+                name = cmds.listConnections(i+'.instObjGroups[0].objectGroups',s=False)  # SGを取得
+            if not name:
+                continue
+            names += name
+    return(names)
+
+# 選択の確認
+def checkSelect(s):
+    sg = []
+    if not s:
+        return()
+    for sel in s:
+        if cmds.objectType(sel,isType='transform'):
+            names = []
+            sg += parent(sel,names)
+        elif cmds.objectType(sel,isType='mesh'):
+            if not (name := cmds.listConnections(sel+'.instObjGroups',s=False)):
+                name = cmds.listConnections(sel+'.instObjGroups[0].objectGroups',s=False)  # SGを取得
+            sg += name
+        elif cmds.objectType(sel,isType='standardSurface') or cmds.objectType(sel,isType='aiStandardSurface') :
+            sg += cmds.listConnections(sel+'.outColor',s=False)
+    return(sg)
+
 # 本体
 def texplace(nodeName,fileName,texPath,rs,hScale,udim):
     s = cmds.ls(sl=True)
+    shadingEngine = list(set(checkSelect(s)))
+    if not shadingEngine:  # 選択されていなければ
+        errorDialog = ErrorWindow(0,'','')  # エラー
+        errorDialog.openWindow()
+    for i in shadingEngine:
+        inputSG  = i
+        input = cmds.listConnections(i+'.surfaceShader',d=False,t='standardSurface')[0]  # マテリアルノード名
+        connects(nodeName,fileName,texPath,rs,hScale,udim,input,inputSG)
+
+# ノード作成と接続
+def connects(nodeName,fileName,texPath,rs,hScale,udim,input,inputSG):
     for i,f in enumerate(fileName):
-        if s == []:  # 選択されていなければ
-            errorDialog = ErrorWindow(0,'','')  # エラー
-            errorDialog.openWindow()
-            break
-        path = projpath(nodeName[i],fileName[i],texPath,s,f,udim)  # 画像ファイルの選択
+        path = projpath(nodeName[i],fileName[i],texPath,input,udim)  # 画像ファイルの選択
         if path==False:  # 画像ファイルがなければ
             break
-        nodes = nodecrate(s,i,nodeName)  # 接続用のノード作成
-        Sorttex(f,nodes[0],nodes[1],nodes[2],path[1],rs,nodes[3],hScale,udim)  # どのアトリビュートと接続するか
+        nodes = nodecrate()  # 接続用のノード作成
+        Sorttex(f,nodes[0],input+'.'+nodeName[i],inputSG,path[1],rs,nodes[1],hScale,udim)  # どのアトリビュートと接続するか
 
 #マテリアルごとのノード、ファイル名
 def materialNodeNames(v):
@@ -384,7 +416,6 @@ def namereplace(self):
     chlist.append(int(self.checkbox6.isChecked()))
     chlist.append(int(self.checkbox7.isChecked()))
     for i, ch in enumerate(chlist):
-        checks = 'check'+str(i+1)  # チェックが入っているものだけリストにする
         if ch == 1:
             nodeName.append(names[0][i])
             fileName.append(names[1][i])
@@ -393,7 +424,6 @@ def namereplace(self):
     hScale = self.doubleSpinBox.value()
     udim = self.checkbox8.isChecked()
     texplace(nodeName,fileName,texPath,rs,hScale,udim)
-
 
 # 変数の記憶
 def savevar(self):
@@ -409,16 +439,12 @@ def savevar(self):
     chlist[7] = int(self.checkbox8.isChecked())
     for i in range(8):
         cmds.optionVar(iva=['checklist',chlist[i]])  # データをuserPrefs.melに保存
-
     if self.textbox2.text() != 'sourceimages/texture/':  # テクスチャフォルダパスの保存
         cmds.optionVar(sv=['texPath',self.textbox2.text()])  # データをuserPrefs.melに保存
-    
     lan = int(self.combobox1.currentIndex())  # 言語設定
     cmds.optionVar(iv=['texlanguage',lan])  # データをuserPrefs.melに保存
-    
     mat = int(self.combobox2.currentIndex())  # マテリアル設定
     cmds.optionVar(iv=['texmaterials',mat])  # データをuserPrefs.melに保存
-    
     scl = self.doubleSpinBox.value()  # ハイトのスケール
     cmds.optionVar(fv=['texhScale',scl])  # データをuserPrefs.melに保存
 
@@ -469,15 +495,14 @@ def resetvariable(self):
 def closeOldWindow(title):
     if cmds.window(title, q=True, ex=True):  # ウィジェットの名前で削除
         cmds.deleteUI(title)
-           
+
 def objName(title):
     return(title + "_window")
-    
+
 #  アプリの実行と終了
 def openWindow():
     title = "Texture_Connect"
     closeOldWindow(objName(title))
-    
     app = QtWidgets.QApplication.instance()
     if cmds.optionVar(q='texlanguage') == 0:
         qm_file = r"texCon_Jp.qm"
@@ -486,10 +511,9 @@ def openWindow():
     translator = QtCore.QTranslator(app)
     translator.load(qm_file,directory = cmds.workspace(q=True,rootDirectory=True)+'\\scripts\\i18n')
     QtCore.QCoreApplication.installTranslator(translator)
-    
     window = MainWindow(title,translator)
     window.show()
     app.exec_()
-    
+
 if __name__ == "__main__":
     openWindow()
