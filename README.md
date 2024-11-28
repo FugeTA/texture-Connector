@@ -4,7 +4,7 @@
 [English](README_EN.md)
 ## 概要
 AdobeSubstancePainterで出力したテクスチャをMayaに簡単にアサインするツールです。  
-pymelが不要なバージョンです。
+RedshiftMaterial対応。
 ## 要件
 なし
 ## 使い方
@@ -17,7 +17,7 @@ textureConnecter.openWindow()
 またはscriptEditor上で直に実行する。
 ## 説明
 1.Substance PainterでArnoldテンプレートを使用し、テクスチャを出力する。  
-2.maya内でHypershade上でマテリアルを選択する。（マテリアル名を変更しないこと）  
+2.maya内でマテリアルまたはメッシュを選択する。（マテリアル名を変更しないこと）  
 3.画像ファイルの入っているフォルダを選択する。    
 4."Connect" ボタンで実行する。
 ## 作者
