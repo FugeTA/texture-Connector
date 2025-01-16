@@ -182,7 +182,9 @@ class MainWindow(mayaMixin.MayaQWidgetBaseMixin,QtWidgets.QWidget):
         self.textbox2.setText(path2)
     # 実行
     def pushed_button3(self):
-        namereplace(self)    
+        cmds.undoInfo(openChunk=True)
+        namereplace(self)
+        cmds.undoInfo(closeChunk=True)
     # 閉じる
     def pushed_button4(self):
         self.close()
@@ -257,7 +259,7 @@ def height(files,input,inputSG,imgPath,rs,hScale,udim):  # ハイト
     cmds.setAttr(disp+'.scale',hScale)
     cmds.setAttr(files+'.fileTextureName',imgPath,type='string')  # Fileノードに画像を設定
 
-def othertex(f,files,input,imgPath,udim):  # その他
+def othertex(files,input,imgPath,udim):  # その他
     if udim:  # UDIMならタイリング変更
         cmds.setAttr((files+'.uvTilingMode'),3)
     cmds.setAttr(files+'.ignoreColorSpaceFileRules',1)  # カラースペース変更、変更を固定
