@@ -1,5 +1,8 @@
 import maya.cmds as cmds
-from PySide2 import QtWidgets,QtCore
+try:
+    from PySide2 import QtWidgets,QtCore,QtGui
+except:
+    from PySide6 import QtWidgets,QtCore,QtGui
 from maya.app.general import mayaMixin
 import re
 import pathlib
@@ -42,7 +45,7 @@ class MainWindow(mayaMixin.MayaQWidgetBaseMixin,QtWidgets.QWidget):
         load = loadvar()  # 前回の変数呼び出し
         try:  # チャンネルボックスの情報があれば
             ch1,ch2,ch3,ch4,ch5,ch6,ch7,ch8 = load[0]
-        except TypeError:  # 無ければ
+        except:  # 無ければ
             ch1,ch2,ch3,ch4,ch5,ch6,ch7,ch8 = [0,0,0,0,0,0,0,0]
         texpath = load[1]  # テクスチャパス読み込み
         
@@ -515,7 +518,10 @@ def openWindow():
     QtCore.QCoreApplication.installTranslator(translator)
     window = MainWindow(title,translator)
     window.show()
-    app.exec_()
+    try:
+        app.exec()  #Pyside6
+    except:
+        app.exec_()  #Pyside2
 
 if __name__ == "__main__":
     openWindow()
