@@ -1,6 +1,6 @@
 # texture-Connector for maya.cmd
 
-![screenshot](images/Texture_Connector_Window.PNG)  
+![screenshot](images/tex.gif)  
 [English](README_EN.md)
 ## 概要
 AdobeSubstancePainterで出力したテクスチャをMayaに簡単にアサインするツールです。  
