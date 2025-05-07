@@ -5,7 +5,7 @@
 ## Overview
 Easy connect texture For AdobeSubstancePainter to Maya
 ## Requirement
-[pymel](https://github.com/LumaPictures/pymel)
+None
 ## Usage
 1.Install py to own maya script folder.  
 2.run command  
